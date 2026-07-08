@@ -210,6 +210,12 @@ button{font-family:inherit; cursor:pointer;}
   display:flex; align-items:center; justify-content:space-between; background:var(--card);
   border:1px solid var(--line); border-radius:6px; padding:12px 16px; font-size:13px;
 }
+.link-row.grouped{margin-left:18px; width:calc(100% - 18px);}
+.link-group-head{
+  font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.6px; text-transform:uppercase;
+  color:var(--brass); margin:14px 0 8px 0; padding-bottom:4px; border-bottom:1px dashed var(--line);
+}
+.link-group-head:first-child{margin-top:0;}
 .link-row a{color:var(--teal); text-decoration:none; font-weight:600;}
 .link-row a:hover{text-decoration:underline;}
 .link-row .link-desc{color:var(--slate); font-size:12px;}
@@ -349,7 +355,7 @@ button{font-family:inherit; cursor:pointer;}
       <div class="links-list" id="linksProject"></div>
     </div>
 
-    <div class="footer-note">Hotel Development Core Team hub — internal coordination tool. Data entered here lives only in this browser tab and is not saved once you close or refresh the page; treat it as a working scratch space, not a system of record.</div>
+    <div class="footer-note" id="footerNote">Hotel Development Core Team hub — internal coordination tool.</div>
   </div>
 </div>
 
@@ -400,8 +406,10 @@ document.getElementById('logoutBtn').addEventListener('click', ()=>{
   document.getElementById('loginEmail').value=''; document.getElementById('loginPassword').value='';
 });
 
-/* ================= DATA (in-memory only) ================= */
-const DATA = {
+/* ================= DATA (persisted to this browser via localStorage) ================= */
+const STORAGE_KEY = 'hotelCoreTeamData_v1';
+
+const DEFAULT_DATA = {
   design: {
     members: [
       {name:'Nagashree U', role:'Design Lead', email:'nagashree.u@oliveliving.com'},
@@ -411,7 +419,11 @@ const DATA = {
       {author:'Nagashree U', date:'Today', body:'Sample update — replace with the latest design review notes for the Spark prototype.'}
     ],
     links: [
-      {label:'Hotel Feasibility Check (NBC 2016)', desc:'Setback / height / FAR / room-module workbook', href:'Hotel_Feasibility_Check_NBC2016.xlsx'}
+      {group:'Feasibility', label:'Greenfield', desc:'New-build feasibility site — setback/FAR/height checks, hotel program, capex & opex', href:'https://unagashree-ish.github.io/Hotel-Dev-Design/Hotel_Feasibility_Capex_Opex.html'},
+      {group:'Feasibility', label:'Brownfield', desc:'Redevelopment of an existing site — link to be added', href:'#'},
+      {group:'Feasibility', label:'Conversion', desc:'Conversion of an existing building to hotel use — link to be added', href:'#'},
+      {group:'Feasibility', label:'FoH', desc:'Spark Front-of-House standards calculator — inside the Feasibility site, tab B', href:'https://unagashree-ish.github.io/Hotel-Dev-Design/Hotel_Feasibility_Capex_Opex.html'},
+      {group:'Feasibility', label:'BoH', desc:'Spark Back-of-House standards calculator — inside the Feasibility site, tab B', href:'https://unagashree-ish.github.io/Hotel-Dev-Design/Hotel_Feasibility_Capex_Opex.html'}
     ]
   },
   project: {
@@ -427,6 +439,45 @@ const DATA = {
     ]
   }
 };
+
+let STORAGE_OK = true;
+function loadData(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw) return JSON.parse(raw);
+  }catch(e){
+    STORAGE_OK = false;
+  }
+  return JSON.parse(JSON.stringify(DEFAULT_DATA)); // deep copy of seed
+}
+function saveData(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(DATA));
+  }catch(e){
+    STORAGE_OK = false;
+  }
+  updateStorageNote();
+}
+function resetData(){
+  if(!confirm('Reset this browser\'s data back to the sample content? This cannot be undone.')) return;
+  DATA = JSON.parse(JSON.stringify(DEFAULT_DATA));
+  saveData();
+  renderApp();
+}
+
+let DATA = loadData();
+
+function updateStorageNote(){
+  const el = document.getElementById('footerNote');
+  if(!el) return;
+  const isAdmin = CURRENT_USER && CURRENT_USER.role==='admin';
+  if(STORAGE_OK){
+    el.innerHTML = `Hotel Development Core Team hub — internal coordination tool. Changes you add are saved in <b>this browser, on this device</b> (via local storage) and will still be here next time you open this file here — but they do <b>not</b> sync to teammates opening the file on their own computer, and clearing your browser data will erase them.`
+      + (isAdmin ? ` <button class="del-x" style="position:static; color:#B3261E; font-size:11.5px; text-decoration:underline;" onclick="resetData()">Reset this browser's data</button>` : '');
+  } else {
+    el.innerHTML = `Hotel Development Core Team hub — internal coordination tool. This browser blocked local storage (private/incognito mode, or storage disabled), so changes will only last for this tab and disappear on refresh.`;
+  }
+}
 
 /* ================= NAV ================= */
 function goHome(){
@@ -490,17 +541,32 @@ function renderApp(){
 
     // Links
     const linksEl = document.getElementById('links'+cap(wing));
-    linksEl.innerHTML = d.links.length ? d.links.map((l,i)=>`
-      <div class="link-row">
-        <div><a href="${escapeAttr(l.href)}" target="_blank" rel="noopener">${escapeHtml(l.label)}</a><div class="link-desc">${escapeHtml(l.desc||'')}</div></div>
-        ${isAdmin?`<button class="del-x" data-action="delLink" data-wing="${wing}" data-idx="${i}">×</button>`:''}
-      </div>`).join('') : `<div class="empty-state">No links added yet.</div>`;
+    linksEl.innerHTML = renderLinksGrouped(d.links, wing, isAdmin);
   });
 
   // hide add-buttons for team role
   document.querySelectorAll('.add-btn').forEach(b=> b.style.display = isAdmin ? 'inline-block':'none');
 
   bindActionButtons();
+  updateStorageNote();
+}
+function renderLinksGrouped(links, wing, isAdmin){
+  if(!links.length) return `<div class="empty-state">No links added yet.</div>`;
+  let html = '';
+  let lastGroup = undefined;
+  links.forEach((l,i)=>{
+    const g = l.group || '';
+    if(g !== lastGroup){
+      html += `<div class="link-group-head">${escapeHtml(g || 'General')}</div>`;
+      lastGroup = g;
+    }
+    html += `
+      <div class="link-row${g?' grouped':''}">
+        <div>${l.href && l.href!=='#' ? `<a href="${escapeAttr(l.href)}" target="_blank" rel="noopener">${escapeHtml(l.label)}</a>` : `<span style="color:var(--slate);font-weight:600;">${escapeHtml(l.label)} <span class="badge amber" style="margin-left:6px;">Coming soon</span></span>`}<div class="link-desc">${escapeHtml(l.desc||'')}</div></div>
+        ${isAdmin?`<button class="del-x" data-action="delLink" data-wing="${wing}" data-idx="${i}">×</button>`:''}
+      </div>`;
+  });
+  return html;
 }
 function cap(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -508,9 +574,9 @@ function escapeAttr(s){ return escapeHtml(s); }
 
 /* ================= ACTIONS (admin only) ================= */
 function bindActionButtons(){
-  document.querySelectorAll('[data-action="delMember"]').forEach(b=>b.onclick=()=>{ DATA[b.dataset.wing].members.splice(b.dataset.idx,1); renderApp(); });
-  document.querySelectorAll('[data-action="delNote"]').forEach(b=>b.onclick=()=>{ DATA[b.dataset.wing].notes.splice(b.dataset.idx,1); renderApp(); });
-  document.querySelectorAll('[data-action="delLink"]').forEach(b=>b.onclick=()=>{ DATA[b.dataset.wing].links.splice(b.dataset.idx,1); renderApp(); });
+  document.querySelectorAll('[data-action="delMember"]').forEach(b=>b.onclick=()=>{ DATA[b.dataset.wing].members.splice(b.dataset.idx,1); saveData(); renderApp(); });
+  document.querySelectorAll('[data-action="delNote"]').forEach(b=>b.onclick=()=>{ DATA[b.dataset.wing].notes.splice(b.dataset.idx,1); saveData(); renderApp(); });
+  document.querySelectorAll('[data-action="delLink"]').forEach(b=>b.onclick=()=>{ DATA[b.dataset.wing].links.splice(b.dataset.idx,1); saveData(); renderApp(); });
   document.querySelectorAll('[data-action="addMember"]').forEach(b=>b.onclick=()=>openModal('member', b.dataset.wing));
   document.querySelectorAll('[data-action="addNote"]').forEach(b=>b.onclick=()=>openModal('note', b.dataset.wing));
   document.querySelectorAll('[data-action="addLink"]').forEach(b=>b.onclick=()=>openModal('link', b.dataset.wing));
@@ -535,6 +601,7 @@ function openModal(type, wing){
   } else if(type==='link'){
     body.innerHTML = `
       <h4>Add working link — ${cap(wing)} Wing</h4>
+      <div class="login-field"><label>Group heading (optional, e.g. "Feasibility")</label><input id="lGroup"></div>
       <div class="login-field"><label>Label</label><input id="lLabel"></div>
       <div class="login-field"><label>Description</label><input id="lDesc"></div>
       <div class="login-field"><label>URL / filename</label><input id="lHref" placeholder="https:// or a filename kept in the same folder"></div>
@@ -549,21 +616,31 @@ function saveMember(wing){
   const email = document.getElementById('mEmail').value.trim();
   if(!name) return;
   DATA[wing].members.push({name, role:role||'Team Member', email:email||'—'});
-  closeModal(); renderApp();
+  saveData(); closeModal(); renderApp();
 }
 function saveNote(wing){
   const bodyText = document.getElementById('nBody').value.trim();
   if(!bodyText) return;
   DATA[wing].notes.unshift({author:CURRENT_USER.email, date:new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}), body:bodyText});
-  closeModal(); renderApp();
+  saveData(); closeModal(); renderApp();
 }
 function saveLink(wing){
+  const group = document.getElementById('lGroup').value.trim();
   const label = document.getElementById('lLabel').value.trim();
   const desc = document.getElementById('lDesc').value.trim();
   const href = document.getElementById('lHref').value.trim();
   if(!label||!href) return;
-  DATA[wing].links.push({label, desc, href});
-  closeModal(); renderApp();
+  const newLink = {group, label, desc, href};
+  const links = DATA[wing].links;
+  if(group){
+    let lastIdx = -1;
+    links.forEach((l,i)=>{ if(l.group===group) lastIdx=i; });
+    if(lastIdx>=0){ links.splice(lastIdx+1,0,newLink); }
+    else { links.push(newLink); }
+  } else {
+    links.push(newLink);
+  }
+  saveData(); closeModal(); renderApp();
 }
 document.getElementById('overlay').addEventListener('click', (e)=>{ if(e.target.id==='overlay') closeModal(); });
 </script>
