@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BoH — Design Wing / Pre-Investment</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0c1c2e;
+    --bg-deep:#08141f;
+    --panel:#123151;
+    --panel-soft:#0f2740;
+    --line:rgba(130,200,235,0.16);
+    --line-strong:rgba(130,200,235,0.32);
+    --text:#eaf3fb;
+    --text-muted:#8fabc4;
+    --text-faint:#5d7893;
+    --boh:#59d9c4;
+    --boh-bg:rgba(89,217,196,0.1);
+    --foh:#f2a93b;
+    --foh-bg:rgba(242,169,59,0.1);
+    --fixed:#c48bf2;
+    --scale-arrow:#6fb8e6;
+    --display:'Space Grotesk',sans-serif;
+    --body:'IBM Plex Sans',sans-serif;
+    --mono:'IBM Plex Mono',monospace;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:
+      repeating-linear-gradient(0deg, transparent, transparent 39px, var(--line) 39px, var(--line) 40px),
+      repeating-linear-gradient(90deg, transparent, transparent 39px, var(--line) 39px, var(--line) 40px),
+      linear-gradient(180deg, var(--bg-deep), var(--bg) 6%);
+    color:var(--text);
+    font-family:var(--body);
+    font-size:15px;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--boh);color:#0c1c2e;}
+
+  .shell{display:grid;grid-template-columns:250px 1fr;max-width:1320px;margin:0 auto;}
+  @media (max-width:900px){.shell{grid-template-columns:1fr;}}
+
+  .sidebar{
+    position:sticky;top:0;align-self:start;height:100vh;overflow-y:auto;
+    padding:28px 18px 40px;border-right:1px solid var(--line);
+  }
+  @media (max-width:900px){
+    .sidebar{position:static;height:auto;border-right:none;border-bottom:1px solid var(--line);
+      display:flex;overflow-x:auto;gap:4px;padding:14px 16px;}
+  }
+  .brand{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--text-faint);text-transform:uppercase;margin-bottom:22px;}
+  @media (max-width:900px){.brand{display:none;}}
+  .sheet-index{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px;}
+  @media (max-width:900px){.sheet-index{flex-direction:row;}}
+  .sheet-index a{
+    display:flex;align-items:baseline;gap:10px;padding:10px 10px;border-radius:4px;
+    text-decoration:none;color:var(--text-muted);font-size:13.5px;white-space:nowrap;
+    border-left:2px solid transparent;transition:background .15s, color .15s;
+  }
+  .sheet-index a:hover{background:var(--panel-soft);color:var(--text);}
+  .sheet-index a.active{color:var(--text);background:var(--panel-soft);border-left-color:var(--boh);}
+  .sheet-index .num{font-family:var(--mono);font-size:11px;color:var(--text-faint);}
+  .sheet-index a.active .num{color:var(--boh);}
+
+  .side-selector{margin-top:30px;padding-top:22px;border-top:1px solid var(--line);}
+  @media (max-width:900px){.side-selector{display:none;}}
+  .side-selector .k{font-family:var(--mono);font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;}
+  .side-selector .keyval{font-family:var(--display);font-size:28px;color:var(--text);}
+  .side-selector .keyval span{font-size:13px;color:var(--text-faint);font-family:var(--body);}
+
+  main{padding:0 0 100px;}
+  section{padding:64px 48px;border-bottom:1px solid var(--line);scroll-margin-top:20px;}
+  @media (max-width:640px){section{padding:44px 22px;}}
+  section:last-child{border-bottom:none;}
+
+  .eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.16em;color:var(--text-faint);text-transform:uppercase;margin-bottom:14px;}
+  .eyebrow a{color:var(--text-faint);text-decoration:none;}
+  .eyebrow a:hover{color:var(--boh);}
+  h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,5vw,54px);line-height:1.04;margin:0 0 18px;letter-spacing:-0.01em;}
+  h2{font-family:var(--display);font-weight:600;font-size:26px;margin:0 0 6px;display:flex;align-items:baseline;gap:12px;}
+  h2 .num{font-family:var(--mono);font-size:14px;color:var(--boh);font-weight:500;}
+  h3{font-family:var(--display);font-weight:600;font-size:16.5px;margin:34px 0 14px;}
+  h3:first-of-type{margin-top:8px;}
+  .sheet-sub{color:var(--text-muted);font-size:14.5px;max-width:640px;margin:0 0 30px;}
+  p.lede{color:var(--text-muted);font-size:16.5px;max-width:600px;margin:0 0 30px;}
+
+  .hero{padding-top:52px;}
+  .hero-grid{display:grid;grid-template-columns:1.3fr 0.95fr;gap:48px;align-items:start;}
+  @media (max-width:900px){.hero-grid{grid-template-columns:1fr;}}
+  .hero-meta{display:flex;gap:26px;flex-wrap:wrap;margin-top:26px;}
+  .hero-meta div{font-family:var(--mono);font-size:12px;color:var(--text-faint);}
+  .hero-meta strong{display:block;font-family:var(--body);font-size:14px;color:var(--text);font-weight:500;margin-top:3px;}
+
+  /* key selector */
+  .key-selector{
+    background:var(--panel-soft);border:1px solid var(--line);border-radius:10px;padding:24px 26px;
+  }
+  .key-selector .label{font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;color:var(--text-faint);text-transform:uppercase;}
+  .key-buttons{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;}
+  .key-btn{
+    font-family:var(--mono);font-size:13.5px;padding:9px 14px;border-radius:6px;
+    border:1px solid var(--line-strong);background:transparent;color:var(--text-muted);
+    cursor:pointer;transition:all .15s;
+  }
+  .key-btn:hover{border-color:var(--boh);color:var(--text);}
+  .key-btn.active{background:var(--boh);border-color:var(--boh);color:#08141f;font-weight:600;}
+
+  .summary-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:24px;}
+  @media (max-width:640px){.summary-cards{grid-template-columns:1fr 1fr;}}
+  .s-card{background:var(--panel-soft);border:1px solid var(--line);border-radius:8px;padding:16px 18px;}
+  .s-card .k{font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.05em;font-family:var(--mono);}
+  .s-card .v{font-family:var(--display);font-size:22px;margin-top:5px;}
+  .s-card.boh{border-left:3px solid var(--boh);}
+  .s-card.foh{border-left:3px solid var(--foh);}
+
+  /* stacked bar */
+  .stack-wrap{margin-top:26px;}
+  .stack-bar{height:34px;border-radius:6px;overflow:hidden;display:flex;border:1px solid var(--line-strong);}
+  .stack-bar .seg{display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11.5px;font-weight:600;transition:width .35s ease;white-space:nowrap;overflow:hidden;}
+  .stack-bar .seg.boh{background:var(--boh);color:#08141f;}
+  .stack-bar .seg.foh{background:var(--foh);color:#08141f;}
+  .stack-legend{display:flex;gap:22px;margin-top:12px;font-size:12.5px;color:var(--text-muted);}
+  .stack-legend span{display:inline-flex;align-items:center;gap:7px;}
+  .stack-legend i{width:10px;height:10px;border-radius:2px;display:inline-block;}
+
+  .table-wrap{overflow-x:auto;margin-top:16px;border:1px solid var(--line);border-radius:8px;}
+  table.data{width:100%;border-collapse:collapse;font-size:13.5px;min-width:520px;}
+  table.data th{
+    font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--text-faint);text-align:right;padding:10px 12px;border-bottom:1px solid var(--line-strong);
+    background:var(--panel-soft);position:sticky;top:0;
+  }
+  table.data th:first-child{text-align:left;}
+  table.data td{padding:9px 12px;border-bottom:1px solid var(--line);text-align:right;font-family:var(--mono);color:var(--text-muted);}
+  table.data td:first-child{text-align:left;font-family:var(--body);color:var(--text);}
+  table.data tr.total td{background:rgba(89,217,196,0.06);color:var(--text);font-weight:600;}
+  table.data tr.total.foh-total td{background:rgba(242,169,59,0.06);}
+  table.data tr.grey td{color:var(--text-faint);font-style:italic;}
+  table.data tr:last-child td{border-bottom:none;}
+  table.data td.tag{font-family:var(--body);font-size:10.5px;}
+  .tag-fixed{color:var(--fixed);}
+  .tag-scale{color:var(--scale-arrow);}
+
+  .full-tier-wrap{overflow-x:auto;margin-top:8px;border:1px solid var(--line);border-radius:8px;}
+  table.tier{width:100%;border-collapse:collapse;font-size:12.5px;min-width:760px;}
+  table.tier th, table.tier td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--line);font-family:var(--mono);color:var(--text-muted);}
+  table.tier th{color:var(--text-faint);text-transform:uppercase;font-size:10px;letter-spacing:.05em;background:var(--panel-soft);position:sticky;top:0;}
+  table.tier td:first-child, table.tier th:first-child{text-align:left;position:sticky;left:0;background:var(--bg);}
+  table.tier th:first-child{background:var(--panel-soft);}
+  table.tier td:first-child{font-family:var(--body);color:var(--text);}
+  table.tier tr.total td{font-weight:600;color:var(--text);background:rgba(89,217,196,0.05);}
+  table.tier td.hi{color:var(--boh);font-weight:600;}
+
+  .assump-table{width:100%;border-collapse:collapse;margin-top:6px;}
+  .assump-table tr{border-bottom:1px solid var(--line);}
+  .assump-table tr:last-child{border-bottom:none;}
+  .assump-table td{padding:10px 4px;font-size:14px;}
+  .assump-table td:first-child{color:var(--text-muted);}
+  .assump-table td:last-child{font-family:var(--mono);color:var(--text);text-align:right;font-weight:500;}
+
+  .note-block{margin-top:14px;padding:16px 18px;background:var(--panel-soft);border:1px solid var(--line);border-radius:8px;font-size:13.5px;color:var(--text-muted);}
+  .note-block strong{color:var(--text);}
+
+  footer{padding:36px 48px;font-family:var(--mono);font-size:11.5px;color:var(--text-faint);}
+  @media (max-width:640px){footer{padding:30px 22px;}}
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand">Design Wing<br>Pre-Investment / BoH</div>
+    <ul class="sheet-index" id="sheetNav">
+      <li><a href="#lookup" data-i="0"><span class="num">01</span>Quick Lookup</a></li>
+      <li><a href="#boh" data-i="1"><span class="num">02</span>BOH Standards</a></li>
+      <li><a href="#foh" data-i="2"><span class="num">03</span>FOH Standards</a></li>
+      <li><a href="#assumptions" data-i="3"><span class="num">04</span>Assumptions</a></li>
+    </ul>
+    <div class="side-selector">
+      <div class="k">Selected key count</div>
+      <div class="keyval"><span id="sideKeyVal">100</span> <span>keys</span></div>
+    </div>
+  </aside>
+
+  <main>
+    <section class="hero" id="lookup">
+      <div class="eyebrow"><a href="#">Design Wing</a> / <a href="#">Pre-Investment</a> — BoH</div>
+      <div class="hero-grid">
+        <div>
+          <h1>BoH</h1>
+          <p class="lede">A one-click area calculator for back-of-house and front-of-house space planning, built on Spark's internal benchmarks. Pick a key count and every component — from lockers to the loading dock — scales to it, with the full BOH and FOH breakdowns laid out side by side.</p>
+          <div class="hero-meta">
+            <div>Benchmark keys<strong>60 · 80 · 100 · 120 · 150 · 200 · 250 · 300</strong></div>
+            <div>Source<strong>Internal Spark standards + NBC 2016 Part 4</strong></div>
+            <div>Method<strong>Interpolated / extrapolated, see Assumptions</strong></div>
+          </div>
+        </div>
+        <div class="key-selector">
+          <div class="label">Select number of keys</div>
+          <div class="key-buttons" id="keyButtons"></div>
+        </div>
+      </div>
+
+      <div class="summary-cards">
+        <div class="s-card boh"><div class="k">Total BOH area</div><div class="v" id="sumBohTotal">—</div></div>
+        <div class="s-card foh"><div class="k">Total FOH area</div><div class="v" id="sumFohTotal">—</div></div>
+        <div class="s-card"><div class="k">Combined total</div><div class="v" id="sumCombined">—</div></div>
+        <div class="s-card boh"><div class="k">BOH area / key</div><div class="v" id="sumBohPerKey">—</div></div>
+        <div class="s-card foh"><div class="k">FOH area / key</div><div class="v" id="sumFohPerKey">—</div></div>
+        <div class="s-card"><div class="k">FOH vs BOH</div><div class="v" id="sumFohVsBoh">—</div></div>
+      </div>
+
+      <div class="stack-wrap">
+        <div class="label" style="font-family:var(--mono);font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Area split, this key count</div>
+        <div class="stack-bar">
+          <div class="seg boh" id="stackBoh"></div>
+          <div class="seg foh" id="stackFoh"></div>
+        </div>
+        <div class="stack-legend">
+          <span><i style="background:var(--boh)"></i>Back of house</span>
+          <span><i style="background:var(--foh)"></i>Front of house</span>
+        </div>
+      </div>
+
+      <h3>Back of house — breakdown for selected keys</h3>
+      <div class="table-wrap">
+        <table class="data">
+          <thead><tr><th>Component</th><th>No.s</th><th>SFT</th></tr></thead>
+          <tbody id="bohLookupBody"></tbody>
+        </table>
+      </div>
+
+      <h3>Front of house — breakdown for selected keys</h3>
+      <div class="table-wrap">
+        <table class="data">
+          <thead><tr><th>Component</th><th>No.s</th><th>SFT</th></tr></thead>
+          <tbody id="fohLookupBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- BOH STANDARDS -->
+    <section id="boh">
+      <div class="eyebrow">Sheet 02</div>
+      <h2><span class="num">02</span>BOH Standards</h2>
+      <p class="sheet-sub">Back-of-house area standards across all eight benchmark tiers. Blue = original Spark source benchmark, black = interpolated (120 keys) or extrapolated (250 / 300 keys), green = count × SFT-per-unit factor. Grey rows are counts for reference only, excluded from the area total.</p>
+      <div class="full-tier-wrap">
+        <table class="tier" id="bohTierTable"></table>
+      </div>
+      <div class="note-block">Staff entry &amp; exit (a binary requirement) and the service lift (a fixture count) are excluded from the BOH area total per design standard.</div>
+    </section>
+
+    <!-- FOH STANDARDS -->
+    <section id="foh">
+      <div class="eyebrow">Sheet 03</div>
+      <h2><span class="num">03</span>FOH Standards</h2>
+      <p class="sheet-sub">Front-of-house area standards across all eight benchmark tiers. Purple = fixed, constant regardless of key count. Green = dine area, calculated as pax (65% × keys) × the NBC dining factor. Black = items that scale using the BOH growth curve, so FOH stays proportionally above BOH at every tier.</p>
+      <div class="full-tier-wrap">
+        <table class="tier" id="fohTierTable"></table>
+      </div>
+
+      <h3>F&amp;B provisions checklist</h3>
+      <p style="color:var(--text-muted);font-size:13.5px;max-width:560px;margin-top:-6px;">Covered within the dine area / kitchen figures above — no separate area is counted for these.</p>
+      <div class="table-wrap">
+        <table class="data">
+          <tbody>
+            <tr><td>Buffet counter</td><td></td><td style="text-align:right;">Required</td></tr>
+            <tr><td>Coffee machine</td><td></td><td style="text-align:right;">Required</td></tr>
+            <tr><td>POS desk</td><td></td><td style="text-align:right;">Required</td></tr>
+            <tr><td>KOT machine</td><td></td><td style="text-align:right;">Required</td></tr>
+            <tr><td>Live counter</td><td></td><td style="text-align:right;">Required</td></tr>
+            <tr><td>Receiving area</td><td></td><td style="text-align:right;">Required</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ASSUMPTIONS -->
+    <section id="assumptions">
+      <div class="eyebrow">Sheet 04</div>
+      <h2><span class="num">04</span>Assumptions &amp; Methodology</h2>
+      <p class="sheet-sub">Area conversion factors and the reasoning behind every scaled and interpolated figure above.</p>
+
+      <h3>Area conversion factors</h3>
+      <table class="assump-table">
+        <tr><td>Changing room (per room)</td><td>60 SFT</td></tr>
+        <tr><td>Washroom / WC (per WC fixture, women)</td><td>20 SFT</td></tr>
+        <tr><td>Urinal (per fixture, men)</td><td>9 SFT</td></tr>
+        <tr><td>Locker (per locker, men or women)</td><td>3 SFT</td></tr>
+        <tr><td>Staff accommodation (per bed, ground staff)</td><td>40 SFT</td></tr>
+        <tr><td>GRE accommodation (per person)</td><td>60 SFT</td></tr>
+        <tr><td>Handwash point (per basin)</td><td>8 SFT</td></tr>
+        <tr><td>Work station (per desk)</td><td>30 SFT</td></tr>
+        <tr><td>Dining area per cover — NBC 2016 Part 4</td><td>16.15 SFT</td></tr>
+        <tr><td>Shower cabin (per unit, men or women)</td><td>36 SFT</td></tr>
+      </table>
+      <p style="font-size:13px;color:var(--text-faint);max-width:600px;margin-top:14px;">NBC 2016 Part 4 sets dining area at 1.5 sqm / cover (16.15 SFT/cover). A 65% occupancy factor is applied to key count to arrive at pax. All other factors are standard hospitality BOH planning benchmarks — not confirmed Hilton/Spark figures — and can be edited to override with confirmed figures.</p>
+
+      <h3>Source &amp; method, tier by tier</h3>
+      <div class="note-block"><strong>60 / 80 / 100 / 150 / 200 keys.</strong> Counts and areas are taken directly from the internal Spark standards sheet.</div>
+      <div class="note-block"><strong>120-key BOH.</strong> Linear interpolation between the 100- and 150-key benchmarks.</div>
+      <div class="note-block"><strong>250 / 300-key BOH.</strong> Linear extrapolation, continuing the 150 → 200 key growth rate.</div>
+      <div class="note-block"><strong>Count-to-area, BOH.</strong> Convertible items — lockers, workstations, changing rooms and so on — carry two rows each in BOH Standards: a count and a bold area row (count × SFT-per-unit factor). The Quick Lookup view shows both side by side.</div>
+      <div class="note-block"><strong>Fixed FOH items.</strong> Spark wall (120 SFT), retail / vending machine (140 SFT) and chai cart (80 SFT) stay constant regardless of key count, per design standard.</div>
+      <div class="note-block"><strong>Dine area, FOH.</strong> Pax = 65% × key count; dine area = pax × the NBC dining factor. Scales with key count following NBC 2016.</div>
+      <div class="note-block"><strong>Scaling FOH items.</strong> Reception, social lounge, kitchen, gym and washrooms scale using the BOH total's growth curve, so FOH stays proportionally above BOH at every tier.</div>
+      <div class="note-block"><strong>Excluded from the BOH total.</strong> Staff entry &amp; exit (a binary requirement) and the service lift (a fixture count) are excluded per user instruction.</div>
+    </section>
+
+    <footer>BoH — Design Wing / Pre-Investment · Derived from the BOH/FOH Spark Standards workbook · Internal planning benchmark, not confirmed Hilton/Spark figures unless noted.</footer>
+  </main>
+</div>
+
+<script>
+const KEYS = [60,80,100,120,150,200,250,300];
+
+const BOH = [
+  {name:'Security cabin', unit:'SFT', vals:[64,64,64,64,64,64,64,64]},
+  {name:'Time office', unit:'SFT', vals:[64,64,100,108,120,150,180,210]},
+  {name:'Uniform room', unit:'SFT', vals:[100,133.33,166.67,200.002,250,333.33,416.66,499.99]},
+  {name:'Server room', unit:'SFT', vals:[100,100,100,100,100,100,100,100]},
+  {name:'Changing room – Women (count)', unit:'No.s', grey:true, vals:[1,1,1,1,1,1,1,1]},
+  {name:'Changing room – Women', unit:'SFT', vals:[60,60,60,60,60,60,60,60]},
+  {name:'Washroom – Women (count)', unit:'No.s', grey:true, vals:[1,2,2,2.4,3,3,3,3]},
+  {name:'Washroom – Women', unit:'SFT', vals:[20,40,40,48,60,60,60,60]},
+  {name:'Changing room – Men (count)', unit:'No.s', grey:true, vals:[2,2,2,2,2,2,2,2]},
+  {name:'Changing room – Men', unit:'SFT', vals:[120,120,120,120,120,120,120,120]},
+  {name:'Urinals – Men (count)', unit:'No.s', grey:true, vals:[2,3,3,3.4,4,4,4,4]},
+  {name:'Urinals – Men', unit:'SFT', vals:[18,27,27,30.6,36,36,36,36]},
+  {name:'Lockers – Men (count)', unit:'No.s', grey:true, vals:[33,37,45,54,67,90,113,136]},
+  {name:'Lockers – Men', unit:'SFT', vals:[99,111,135,162,201,270,339,408]},
+  {name:'Lockers – Women (count)', unit:'No.s', grey:true, vals:[8.8,9.8,10,11.2,13,14.4,15.8,17.2]},
+  {name:'Lockers – Women', unit:'SFT', vals:[26.4,29.4,30,33.6,39,43.2,47.4,51.6]},
+  {name:'Ladies room', unit:'SFT', vals:[100,100,100,140,200,200,200,200]},
+  {name:'Staff accommodation, ground staff (count)', unit:'No.s', grey:true, vals:[16,18,20,22.4,26,30,34,38]},
+  {name:'Staff accommodation, ground staff', unit:'SFT', vals:[640,720,800,896,1040,1200,1360,1520]},
+  {name:'GRE accommodation (count)', unit:'No.s', grey:true, vals:[4,5,5,5.4,6,6,6,6]},
+  {name:'GRE accommodation', unit:'SFT', vals:[240,300,300,324,360,360,360,360]},
+  {name:'Staff dine area', unit:'SFT', vals:[595,682.5,700,820,1000,1200,1400,1600]},
+  {name:'Staff kitchen', unit:'SFT', vals:[120,150,150,170,200,300,400,500]},
+  {name:'Handwash points (count)', unit:'No.s', grey:true, vals:[3,3,3,3.4,4,4,4,4]},
+  {name:'Handwash points', unit:'SFT', vals:[24,24,24,27.2,32,32,32,32]},
+  {name:'Break out space + game zone', unit:'SFT', vals:[200,250,250,290,350,350,350,350]},
+  {name:'Reception – BoH', unit:'SFT', vals:[120,120,150,162,180,200,220,240]},
+  {name:'Garbage segregation', unit:'SFT', vals:[80,80,80,88,100,120,140,160]},
+  {name:'Main store', unit:'SFT', vals:[200,200,200,220,250,300,350,400]},
+  {name:'Kitchen store', unit:'SFT', vals:[100,100,120,132,150,150,150,150]},
+  {name:'GM office', unit:'SFT', vals:[100,100,100,100,100,100,100,100]},
+  {name:'Work stations (count)', unit:'No.s', grey:true, vals:[5,6,6,6.8,8,8,8,8]},
+  {name:'Work stations', unit:'SFT', vals:[150,180,180,204,240,240,240,240]},
+  {name:'Staff entry & exit – separate', unit:'—', grey:true, req:true},
+  {name:'Service lift (count, excluded from total)', unit:'No.s', grey:true, vals:[1,1,1,1,1,2,3,4]},
+  {name:'Luggage room', unit:'SFT', vals:[80,80,80,88,100,100,100,100]},
+  {name:'Cloth washing', unit:'SFT', vals:[60,80,80,96,120,150,180,210]},
+  {name:'Cloth drying', unit:'SFT', vals:[60,80,80,96,120,150,180,210]},
+  {name:'Shower – Women (count)', unit:'No.s', grey:true, vals:[1,1,1,1,1,2,2,2]},
+  {name:'Shower – Women', unit:'SFT', vals:[36,36,36,36,36,72,72,72]},
+  {name:'Shower – Men (count)', unit:'No.s', grey:true, vals:[1,1,1,1,1,2,2,2]},
+  {name:'Shower – Men', unit:'SFT', vals:[36,36,36,36,36,72,72,72]},
+];
+const BOH_TOTAL = [3612.4,4067.23,4308.67,4851.402,5664,6532.53,7329.06,8125.59];
+const BOH_PER_KEY = [60.2067,50.8404,43.0867,40.4284,37.76,32.6626,29.3162,27.0853];
+
+const FOH = [
+  {name:'Valet parking', unit:'—', grey:true, req:true},
+  {name:'Boom barrier', unit:'—', grey:true, req:true},
+  {name:'X-ray scanner', unit:'—', grey:true, req:true},
+  {name:'Reception', unit:'SFT', tag:'scale', vals:[380,427.845,453.243,510.335,595.814,687.178,770.967,854.757]},
+  {name:'Spark wall', unit:'SFT', tag:'fixed', vals:[120,120,120,120,120,120,120,120]},
+  {name:'Retail space / vending machine', unit:'SFT', tag:'fixed', vals:[140,140,140,140,140,140,140,140]},
+  {name:'Social lounge', unit:'SFT', tag:'scale', vals:[380,427.845,453.243,510.335,595.814,687.178,770.967,854.757]},
+  {name:'Dine — pax (65% × keys)', unit:'Pax', grey:true, vals:[39,52,65,78,98,130,163,195]},
+  {name:'Dine area (pax × 16.15 SFT/cover)', unit:'SFT', tag:'scale', vals:[629.85,839.8,1049.75,1259.7,1582.7,2099.5,2632.45,3149.25]},
+  {name:'Chai cart', unit:'SFT', tag:'fixed', vals:[80,80,80,80,80,80,80,80]},
+  {name:'Main kitchen', unit:'SFT', tag:'scale', vals:[1120,1261.017,1335.874,1504.144,1756.085,2025.366,2272.325,2519.284]},
+  {name:'Gym', unit:'SFT', tag:'scale', vals:[680,765.617,811.066,913.23,1066.194,1229.687,1379.626,1529.565]},
+  {name:'Washrooms', unit:'SFT', tag:'scale', vals:[300,337.772,357.823,402.896,470.38,542.509,608.659,674.808]},
+];
+const FOH_TOTAL = [3829.85,4399.897,4800.999,5440.639,6406.987,7611.418,8774.994,9922.421];
+const FOH_PER_KEY = [63.8308,54.9987,48.01,45.3387,42.7132,38.0571,35.1,33.0747];
+
+function fmt(n){
+  if(n===undefined||n===null||isNaN(n)) return '—';
+  return Number(n).toLocaleString('en-IN',{minimumFractionDigits:0,maximumFractionDigits:2});
+}
+
+let selectedIdx = 2; // default 100 keys
+
+function buildKeyButtons(){
+  const wrap = document.getElementById('keyButtons');
+  wrap.innerHTML = KEYS.map((k,i)=>`<button class="key-btn ${i===selectedIdx?'active':''}" data-i="${i}">${k}</button>`).join('');
+  wrap.querySelectorAll('.key-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      selectedIdx = parseInt(btn.dataset.i);
+      buildKeyButtons();
+      render();
+    });
+  });
+}
+
+function renderLookup(){
+  const bohBody = document.getElementById('bohLookupBody');
+  bohBody.innerHTML = BOH.map(row=>{
+    if(row.req) return `<tr class="grey"><td>${row.name}</td><td>—</td><td>Required — no area counted</td></tr>`;
+    const v = row.vals[selectedIdx];
+    const cls = row.grey ? 'grey' : '';
+    if(row.unit === 'No.s') return `<tr class="${cls}"><td>${row.name}</td><td>${fmt(v)}</td><td>—</td></tr>`;
+    return `<tr class="${cls}"><td>${row.name}</td><td>—</td><td>${fmt(v)}</td></tr>`;
+  }).join('') + `<tr class="total"><td>TOTAL BOH AREA</td><td></td><td>${fmt(BOH_TOTAL[selectedIdx])}</td></tr>`;
+
+  const fohBody = document.getElementById('fohLookupBody');
+  fohBody.innerHTML = FOH.map(row=>{
+    if(row.req) return `<tr class="grey"><td>${row.name}</td><td>—</td><td>Required — no area counted</td></tr>`;
+    const v = row.vals[selectedIdx];
+    if(row.unit === 'Pax') return `<tr class="grey"><td>${row.name}</td><td>${fmt(v)}</td><td>—</td></tr>`;
+    return `<tr><td>${row.name} ${row.tag==='fixed'?'<span class="tag tag-fixed">✦ fixed</span>':row.tag==='scale'?'<span class="tag tag-scale">↗ scales</span>':''}</td><td>—</td><td>${fmt(v)}</td></tr>`;
+  }).join('') + `<tr class="total foh-total"><td>TOTAL FOH AREA</td><td></td><td>${fmt(FOH_TOTAL[selectedIdx])}</td></tr>`;
+
+  const bohT = BOH_TOTAL[selectedIdx], fohT = FOH_TOTAL[selectedIdx];
+  const combined = bohT + fohT;
+  document.getElementById('sumBohTotal').textContent = fmt(bohT)+' sft';
+  document.getElementById('sumFohTotal').textContent = fmt(fohT)+' sft';
+  document.getElementById('sumCombined').textContent = fmt(combined)+' sft';
+  document.getElementById('sumBohPerKey').textContent = fmt(BOH_PER_KEY[selectedIdx])+' sft/key';
+  document.getElementById('sumFohPerKey').textContent = fmt(FOH_PER_KEY[selectedIdx])+' sft/key';
+  const diffPct = ((fohT - bohT)/bohT*100);
+  document.getElementById('sumFohVsBoh').textContent = (diffPct>=0?'FOH +':'FOH ')+diffPct.toFixed(1)+'%';
+
+  const bohPct = (bohT/combined*100), fohPct = 100-bohPct;
+  const bohSeg = document.getElementById('stackBoh');
+  const fohSeg = document.getElementById('stackFoh');
+  bohSeg.style.width = bohPct+'%';
+  fohSeg.style.width = fohPct+'%';
+  bohSeg.textContent = bohPct>10 ? 'BOH '+bohPct.toFixed(0)+'%' : '';
+  fohSeg.textContent = fohPct>10 ? 'FOH '+fohPct.toFixed(0)+'%' : '';
+
+  document.getElementById('sideKeyVal').textContent = KEYS[selectedIdx];
+}
+
+function renderTierTable(tableId, rows, totalRow, unitLabel){
+  const table = document.getElementById(tableId);
+  let head = '<thead><tr><th>Component</th>' + KEYS.map(k=>`<th>${k}</th>`).join('') + '</tr></thead>';
+  let body = '<tbody>';
+  rows.forEach(row=>{
+    if(row.req){
+      body += `<tr><td>${row.name}</td>` + KEYS.map(()=>'<td>Required</td>').join('') + '</tr>';
+      return;
+    }
+    const cls = row.grey ? 'style="color:var(--text-faint);font-style:italic;"' : '';
+    body += `<tr ${cls}><td>${row.name}</td>` + row.vals.map(v=>`<td>${fmt(v)}</td>`).join('') + '</tr>';
+  });
+  body += `<tr class="total"><td>${totalRow.name}</td>` + totalRow.vals.map(v=>`<td class="hi">${fmt(v)}</td>`).join('') + '</tr>';
+  body += `<tr><td>${unitLabel}</td>` + totalRow.perKey.map(v=>`<td>${fmt(v)}</td>`).join('') + '</tr>';
+  body += '</tbody>';
+  table.innerHTML = head + body;
+}
+
+function render(){
+  renderLookup();
+}
+
+buildKeyButtons();
+renderTierTable('bohTierTable', BOH, {name:'TOTAL BOH AREA (SFT)', vals:BOH_TOTAL, perKey:BOH_PER_KEY}, 'BOH area / key (SFT/key)');
+renderTierTable('fohTierTable', FOH, {name:'TOTAL FOH AREA (SFT)', vals:FOH_TOTAL, perKey:FOH_PER_KEY}, 'FOH area / key (SFT/key)');
+render();
+
+const navLinks = document.querySelectorAll('#sheetNav a');
+const sections = Array.from(navLinks).map(a=>document.querySelector(a.getAttribute('href')));
+function updateNav(){
+  let idx = 0;
+  const y = window.scrollY + 120;
+  sections.forEach((s,i)=>{ if(s && s.offsetTop <= y) idx = i; });
+  navLinks.forEach((a,i)=>a.classList.toggle('active', i===idx));
+}
+window.addEventListener('scroll', updateNav);
+updateNav();
+</script>
+</body>
+</html>
