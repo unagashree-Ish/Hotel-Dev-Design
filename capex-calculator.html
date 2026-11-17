@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Interiors CAPEX Calculator — Spark by Hilton</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0c1c2e; --bg-deep:#08141f; --panel:#123151; --panel-soft:#0f2740;
+    --line:rgba(130,200,235,0.16); --line-strong:rgba(130,200,235,0.32);
+    --text:#eaf3fb; --text-muted:#8fabc4; --text-faint:#5d7893;
+    --accent:#c48bf2; --good:#59d9c4; --warm:#f2a93b;
+    --display:'Space Grotesk',sans-serif; --body:'IBM Plex Sans',sans-serif; --mono:'IBM Plex Mono',monospace;
+    --navy:#1B2A4A; --purple:#5B3E96; --lav:#EDE7F6; --grey:#595959;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:
+      repeating-linear-gradient(0deg,transparent,transparent 39px,var(--line) 39px,var(--line) 40px),
+      repeating-linear-gradient(90deg,transparent,transparent 39px,var(--line) 39px,var(--line) 40px),
+      linear-gradient(180deg,var(--bg-deep),var(--bg) 6%);
+    color:var(--text); font-family:var(--body); font-size:14.5px; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:26px 22px 60px}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted)}
+  .eyebrow a{color:var(--text-muted);text-decoration:none}
+  .eyebrow a:hover{color:var(--text)}
+  .top{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}
+  .top .grow{flex:1;min-width:260px}
+  h1{font-family:var(--display);font-size:28px;margin:6px 0 4px;line-height:1.15}
+  .lede{color:var(--text-muted);margin:0;font-size:13.5px;max-width:720px;line-height:1.5}
+  .btn{border:1px solid var(--line-strong);background:var(--panel);color:var(--text);border-radius:9px;padding:10px 16px;font:600 13.5px var(--body);cursor:pointer}
+  .btn:hover{border-color:var(--accent)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#1a0f2b;font-family:var(--display);font-weight:700}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+
+  .grid{display:grid;grid-template-columns:330px 1fr;gap:18px;margin-top:22px;align-items:start}
+  .card{border:1px solid var(--line-strong);border-radius:12px;background:var(--panel-soft);overflow:hidden}
+  .card h2{font-family:var(--display);font-size:15px;margin:0;padding:12px 16px;border-bottom:1px solid var(--line);background:rgba(18,49,81,.6);display:flex;align-items:center;gap:10px}
+  .card h2 .amt{margin-left:auto;font-family:var(--mono);font-size:13.5px;color:var(--good);font-weight:500}
+  .side{position:sticky;top:14px;display:flex;flex-direction:column;gap:14px}
+  .field{display:grid;grid-template-columns:118px 1fr;border-bottom:1px solid var(--line)}
+  .field:last-child{border-bottom:0}
+  .field label{padding:11px 12px;font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);border-right:1px solid var(--line);background:rgba(18,49,81,.45);display:flex;align-items:center}
+  .field input{width:100%;border:0;background:transparent;color:var(--text);font:500 14.5px var(--body);padding:11px 12px;outline:none}
+  .field input:focus{background:rgba(196,139,242,.08)}
+  .field input#keys{font-family:var(--mono);font-size:20px;font-weight:600;color:var(--accent)}
+  input[type=date]{color-scheme:dark}
+  .err{color:#ff8a80;font-size:12.5px;padding:0 4px;min-height:1em}
+
+  .total-card{padding:16px}
+  .big{font-family:var(--display);font-size:30px;font-weight:700;margin:4px 0 2px;color:var(--text)}
+  .big-sub{font-family:var(--mono);font-size:12.5px;color:var(--text-muted)}
+  .kv{display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:13px}
+  .kv:last-child{border-bottom:0}
+  .kv span:last-child{font-family:var(--mono);color:var(--text)}
+  .kv.hl span:last-child{color:var(--good)}
+  .kv.muted span{color:var(--text-muted)}
+  .btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+  .btns .primary{grid-column:1/-1}
+
+  table.items{width:100%;border-collapse:collapse;table-layout:fixed}
+  table.items col.c1{width:40px} table.items col.c3{width:84px} table.items col.c4{width:86px} table.items col.c5{width:140px} table.items col.c6{width:130px}
+  table.items th{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-faint);text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);font-weight:500}
+  table.items th.n, table.items td.n{text-align:right}
+  table.items td{padding:6px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+  table.items tr:last-child td{border-bottom:0}
+  table.items tr.off td{opacity:.42}
+  table.items tr.off td:first-child{opacity:1}
+  td.desc{line-height:1.3}
+  td.desc small{display:block;color:var(--text-faint);font-size:11.5px;margin-top:2px}
+  td.uom{font-family:var(--mono);font-size:12px;color:var(--text-muted);white-space:nowrap}
+  td input.num{width:100%;max-width:128px;text-align:right;background:rgba(8,20,31,.55);border:1px solid var(--line);border-radius:6px;color:var(--text);font:500 13px var(--mono);padding:6px 8px;outline:none}
+  td input.num:focus{border-color:var(--accent)}
+  td input.num.qty{max-width:72px}
+  td input.num[readonly]{background:transparent;border-color:transparent;color:var(--text-muted)}
+  td.amt{font-family:var(--mono);font-size:13px;white-space:nowrap}
+  input[type=checkbox]{accent-color:var(--accent);width:16px;height:16px;cursor:pointer}
+  .note{color:var(--text-faint);font-size:12px;line-height:1.5;padding:10px 16px;border-top:1px solid var(--line)}
+  .excl{margin:0;padding:12px 16px 14px 34px;color:var(--text-muted);font-size:13px;line-height:1.7}
+  .stack{display:flex;flex-direction:column;gap:14px}
+
+  /* ---------- PRINT REPORT ---------- */
+  #report{display:none}
+  @page{size:A4;margin:16mm 15mm 16mm}
+  @media print{
+    body{background:#fff;color:#222}
+    .wrap{display:none !important}
+    #report{display:block;font-family:'Inter',Arial,sans-serif;font-size:9.6pt;color:#222;line-height:1.4}
+    *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  }
+  #report .rh{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:1.2pt solid var(--navy);padding-bottom:3mm;margin-bottom:5mm}
+  #report .brand{font-family:Georgia,serif;font-weight:700;color:var(--purple);font-size:22pt;line-height:1}
+  #report .brand small{display:block;font-size:8.5pt;color:var(--navy);margin-top:1mm}
+  #report .rt{text-align:right}
+  #report .rt b{display:block;font-size:14pt;color:var(--navy)}
+  #report .rt span{color:var(--grey);font-size:9pt}
+  #report table{width:100%;border-collapse:collapse;margin:2mm 0 4mm}
+  #report th{background:var(--navy);color:#fff;font-weight:600;padding:1.6mm 2.2mm;text-align:left;font-size:9pt}
+  #report th.n,#report td.n{text-align:right}
+  #report td{padding:1.3mm 2.2mm;border-bottom:0.5pt solid #d6d0e2;font-size:9pt}
+  #report tbody tr:nth-child(even) td{background:#f6f3fb}
+  #report tr.sub td{font-weight:600;background:var(--lav) !important}
+  #report tr.grand td{font-weight:700;background:var(--navy) !important;color:#fff;font-size:10pt}
+  #report h3{color:var(--purple);font-size:11pt;margin:5mm 0 1mm;break-after:avoid}
+  #report tr{break-inside:avoid}
+  #report .info td:first-child{width:34%;color:var(--grey)}
+  #report .fine{color:var(--grey);font-size:8.5pt;font-style:italic}
+  #report .pb{break-before:page}
+
+  @media (max-width:900px){ .grid{grid-template-columns:1fr} .side{position:static} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="grow">
+      <div class="eyebrow"><a href="index.html" id="backLink">Design Wing</a> / Investment</div>
+      <h1>Interiors CAPEX Calculator</h1>
+      <p class="lede">Spark by Hilton budgetary CAPEX for interiors. Enter the key count to get the overall project cost. Rates are the standard figures from the project samples (Amritsar, Andheri, Vizag, Jalandhar, Mussoorie). Every rate and option can be adjusted for a specific property.</p>
+    </div>
+    <button class="btn" id="closeBtn" style="display:none">✕ Close</button>
+  </div>
+
+  <div class="grid">
+    <!-- LEFT: inputs + totals -->
+    <div class="side">
+      <div class="card">
+        <h2>Project</h2>
+        <div class="field"><label for="keys">Key count</label><input id="keys" type="number" min="1" max="500" step="1" value="60" inputmode="numeric"></div>
+        <div class="field"><label for="project">Project</label><input id="project" type="text" placeholder="e.g. Spark by Hilton Amritsar"></div>
+        <div class="field"><label for="location">Location</label><input id="location" type="text" placeholder="e.g. Amritsar"></div>
+        <div class="field"><label for="ptype">Type</label><input id="ptype" type="text" value="Conversion"></div>
+        <div class="field"><label for="date">Date</label><input id="date" type="date"></div>
+      </div>
+      <div class="err" id="err"></div>
+
+      <div class="card total-card">
+        <div class="eyebrow">Grand total (without tax)</div>
+        <div class="big" id="tGrand">—</div>
+        <div class="big-sub" id="tGrandWords">—</div>
+        <div style="margin-top:12px">
+          <div class="kv"><span>Rooms — FF&amp;E + OS&amp;E</span><span id="sRooms">—</span></div>
+          <div class="kv"><span>Common areas — FF&amp;E</span><span id="sCommon">—</span></div>
+          <div class="kv"><span>IT &amp; EPABX</span><span id="sIT">—</span></div>
+          <div class="kv" id="rowToilet"><span>Toilet refurbishment</span><span id="sToilet">—</span></div>
+          <div class="kv"><span>Fire-rated room doors</span><span id="sDoors">—</span></div>
+          <div class="kv"><span>Capex cost</span><span id="sCapex">—</span></div>
+          <div class="kv"><span>Contingency <input id="cont" class="num" type="number" min="0" max="50" step="0.5" value="5" style="width:52px;background:rgba(8,20,31,.55);border:1px solid var(--line);border-radius:5px;color:var(--text);font:500 12px var(--mono);padding:2px 4px;text-align:right">%</span><span id="sCont">—</span></div>
+          <div class="kv hl"><span><b>Cost per key</b></span><span id="sPerKey">—</span></div>
+        </div>
+        <div class="btns">
+          <button class="btn primary" id="pdfBtn">Generate PDF</button>
+          <button class="btn" id="resetBtn">Reset rates</button>
+          <button class="btn" id="csvBtn">Export CSV</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: line items -->
+    <div class="stack" id="sections"></div>
+  </div>
+</div>
+
+<div id="report"></div>
+
+<script>
+/* ===== Standard rates (from the Spark by Hilton project samples) =====
+   basis: 'key'   -> qty = key count
+          'fixed' -> qty as entered (default 1)
+          'toilet'-> qty defaults to key count, editable                      */
+const DEFAULT_SECTIONS = [
+  { id:'rooms', title:'1. Rooms — FF&E + OS&E', summary:'Rooms - FF&E + OS&E', items:[
+    {id:'ffe',  desc:'Room FF&E package', note:'Bed base & headboard, night stands, TV cabinet, pivot desk, chairs, closet, art, mirrors, curtains, lighting', uom:'Per key', basis:'key', rate:290000, on:true},
+    {id:'ose',  desc:'Room OS&E package', note:'Mattress & pillows, linen (3 sets), 55" TV, mini-bar, digital door lock, hair dryer, iron, hangers, amenities, telephone', uom:'Per key', basis:'key', rate:135000, on:true},
+  ]},
+  { id:'common', title:'2. Common Areas — FF&E', summary:'Common Areas - FF&E', items:[
+    {id:'furn',   desc:'Custom furniture — FOH, BOH', uom:'LS', basis:'fixed', qty:1, rate:4000000, on:true},
+    {id:'light',  desc:'Common area lights', uom:'LS', basis:'fixed', qty:1, rate:250000, on:true},
+    {id:'fnb',    desc:'F&B live kitchen equipment', note:'Optional — included only where the property runs a live kitchen', uom:'LS', basis:'fixed', qty:1, rate:1500000, on:false},
+    {id:'gym',    desc:'Gym equipment + rubber flooring', note:'Brand — Matrix', uom:'LS', basis:'fixed', qty:1, rate:1200000, on:true},
+    {id:'art',    desc:'Art works — brand standards', uom:'LS', basis:'fixed', qty:1, rate:400000, on:true},
+    {id:'sign',   desc:'Signage — brand standards', note:'External / internal / branding', uom:'LS', basis:'fixed', qty:1, rate:1350000, on:true},
+    {id:'acc',    desc:'Accessories & misc.', uom:'LS', basis:'fixed', qty:1, rate:250000, on:true},
+    {id:'plants', desc:'Indoor plants', uom:'LS', basis:'fixed', qty:1, rate:60000, on:true},
+    {id:'mural',  desc:'Mural', uom:'LS', basis:'fixed', qty:1, rate:120000, on:true},
+    {id:'crock',  desc:'Crockery & cutlery — for in-room dining', uom:'Per key', basis:'key', rate:22000, on:true},
+  ]},
+  { id:'it', title:'3. IT & EPABX', summary:'IT & EPABX', items:[
+    {id:'core',   desc:'Core switch', uom:'LS', basis:'fixed', qty:1, rate:505000, on:true},
+    {id:'pep',    desc:'PEP server', uom:'LS', basis:'fixed', qty:1, rate:375000, on:true},
+    {id:'mood',   desc:'Mood Media', note:'2 × ₹18,000', uom:'LS', basis:'fixed', qty:1, rate:36000, on:true},
+    {id:'console',desc:'Console phones', uom:'LS', basis:'fixed', qty:1, rate:18000, on:true},
+    {id:'foh',    desc:'FOH systems', uom:'LS', basis:'fixed', qty:1, rate:820000, on:true},
+    {id:'phones', desc:'Phones', note:'46 × ₹1,400', uom:'LS', basis:'fixed', qty:1, rate:64400, on:true},
+    {id:'epabx',  desc:'EPABX', uom:'LS', basis:'fixed', qty:1, rate:225000, on:true},
+    {id:'tv',     desc:'TV system', uom:'LS', basis:'fixed', qty:1, rate:250000, on:true},
+    {id:'srv',    desc:'Server installation', uom:'LS', basis:'fixed', qty:1, rate:150000, on:true},
+    {id:'wifi',   desc:'Wi-Fi access points — one time', note:'36 × ₹1,500', uom:'LS', basis:'fixed', qty:1, rate:54000, on:true},
+    {id:'access', desc:'Access control', uom:'LS', basis:'fixed', qty:1, rate:140000, on:true},
+    {id:'sec',    desc:'Security equipment', uom:'LS', basis:'fixed', qty:1, rate:1000000, on:true},
+  ]},
+  { id:'toilet', title:'4. Toilet Refurbishment', summary:'Toilet Refurbishment', items:[
+    {id:'toil', desc:'Toilet refurbishment', note:'Removal & debris, waterproofing, new floor & dado, sanitary fixtures. Usually needed for conversions — untick if existing toilets are retained.', uom:'Nos', basis:'toilet', rate:275000, on:true},
+  ]},
+  { id:'doors', title:'5. Fire-Rated Room Doors', summary:'Fire-rated room doors', items:[
+    {id:'door', desc:'Fire-rated room doors', note:'Existing doors to be checked at the property', uom:'Per key', basis:'key', rate:30000, on:true},
+  ]},
+];
+const EXCLUSIONS = [
+  'Annexure 1 — Building health, civil & MEPF',
+  'External landscape / hardscape',
+  'Sanctions & permission costs',
+  'Kitchen equipment (with cold & dry storages)',
+  'DG, transformers, STP, WTP, HVAC, heat pump',
+  'Taxes (all figures are without tax)'
+];
+
+let S = JSON.parse(JSON.stringify(DEFAULT_SECTIONS));
+let toiletQtyTouched = false;
+
+const inr = n => '₹ ' + Math.round(n).toLocaleString('en-IN');
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function words(n){
+  if(n>=1e7) return '₹ ' + (n/1e7).toFixed(2) + ' Cr';
+  if(n>=1e5) return '₹ ' + (n/1e5).toFixed(2) + ' Lakh';
+  return inr(n);
+}
+function keyCount(){ const k=Number(document.getElementById('keys').value); return Number.isInteger(k)&&k>0&&k<=500 ? k : null; }
+function qtyOf(it,k){
+  if(it.basis==='key') return k;
+  if(it.basis==='toilet') return (it.qty==null || !toiletQtyTouched) ? k : it.qty;
+  return it.qty ?? 1;
+}
+
+function buildTables(){
+  const host=document.getElementById('sections'); host.innerHTML='';
+  S.forEach(sec=>{
+    const card=document.createElement('div'); card.className='card';
+    card.innerHTML = `<h2>${esc(sec.title)}<span class="amt" id="amt_${sec.id}">—</span></h2>
+      <table class="items"><colgroup><col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5"><col class="c6"></colgroup><thead><tr><th></th><th>Description</th><th>Basis</th><th class="n">Qty</th><th class="n">Rate (₹)</th><th class="n">Amount</th></tr></thead><tbody>
+      ${sec.items.map(it=>`<tr id="row_${it.id}">
+        <td><input type="checkbox" data-id="${it.id}" class="chk" ${it.on?'checked':''} aria-label="Include ${esc(it.desc)}"></td>
+        <td class="desc">${esc(it.desc)}${it.note?`<small>${esc(it.note)}</small>`:''}</td>
+        <td class="uom">${esc(it.uom)}</td>
+        <td class="n"><input class="num qty" type="number" min="0" step="1" data-id="${it.id}" data-f="qty" ${it.basis==='key'?'readonly tabindex="-1"':''}></td>
+        <td class="n"><input class="num" type="number" min="0" step="500" data-id="${it.id}" data-f="rate" value="${it.rate}"></td>
+        <td class="n amt" id="a_${it.id}">—</td></tr>`).join('')}
+      </tbody></table>`;
+    host.appendChild(card);
+  });
+  const ex=document.createElement('div'); ex.className='card';
+  ex.innerHTML='<h2>Exclusions</h2><ol class="excl">'+EXCLUSIONS.map(e=>'<li>'+esc(e)+'</li>').join('')+'</ol>'+
+    '<div class="note">Budgetary estimate for interiors only, based on the Spark by Hilton project samples. Final costs depend on site survey, design development and vendor quotations.</div>';
+  host.appendChild(ex);
+
+  host.querySelectorAll('input.chk').forEach(c=>c.addEventListener('change',e=>{ find(e.target.dataset.id).on=e.target.checked; calc(); }));
+  host.querySelectorAll('input.num').forEach(inp=>inp.addEventListener('input',e=>{
+    const it=find(e.target.dataset.id), f=e.target.dataset.f, v=Number(e.target.value);
+    if(f==='qty'){ it.qty = isFinite(v)&&v>=0 ? v : 0; if(it.basis==='toilet') toiletQtyTouched=true; }
+    else it.rate = isFinite(v)&&v>=0 ? v : 0;
+    calc(false);
+  }));
+}
+function find(id){ for(const s of S) for(const it of s.items) if(it.id===id) return it; }
+
+let LAST=null;
+function calc(syncQty=true){
+  const k=keyCount(), err=document.getElementById('err');
+  const ids=['tGrand','tGrandWords','sRooms','sCommon','sIT','sToilet','sDoors','sCapex','sCont','sPerKey'];
+  if(!k){
+    err.textContent='Enter a whole-number key count (1–500).';
+    ids.forEach(i=>document.getElementById(i).textContent='—');
+    document.getElementById('pdfBtn').disabled=true; LAST=null; return;
+  }
+  err.textContent=''; document.getElementById('pdfBtn').disabled=false;
+  const secTotals={};
+  S.forEach(sec=>{
+    let t=0;
+    sec.items.forEach(it=>{
+      const q=qtyOf(it,k), amt=it.on ? q*it.rate : 0;
+      const qi=document.querySelector(`input[data-id="${it.id}"][data-f="qty"]`);
+      if(syncQty || it.basis==='key' || (it.basis==='toilet'&&!toiletQtyTouched)) { if(document.activeElement!==qi) qi.value=q; }
+      document.getElementById('a_'+it.id).textContent = it.on ? inr(amt) : 'Excluded';
+      document.getElementById('row_'+it.id).classList.toggle('off',!it.on);
+      it._q=q; it._amt=amt; t+=amt;
+    });
+    secTotals[sec.id]=t;
+    document.getElementById('amt_'+sec.id).textContent=inr(t);
+  });
+  const capex=Object.values(secTotals).reduce((a,b)=>a+b,0);
+  const pct=Math.max(0,Number(document.getElementById('cont').value)||0);
+  const cont=capex*pct/100, grand=capex+cont;
+  document.getElementById('sRooms').textContent=inr(secTotals.rooms);
+  document.getElementById('sCommon').textContent=inr(secTotals.common);
+  document.getElementById('sIT').textContent=inr(secTotals.it);
+  document.getElementById('sToilet').textContent=secTotals.toilet? inr(secTotals.toilet):'Not included';
+  document.getElementById('sDoors').textContent=inr(secTotals.doors);
+  document.getElementById('sCapex').textContent=inr(capex);
+  document.getElementById('sCont').textContent=inr(cont);
+  document.getElementById('tGrand').textContent=inr(grand);
+  document.getElementById('tGrandWords').textContent=words(grand)+' · '+k+' keys';
+  document.getElementById('sPerKey').textContent=inr(grand/k);
+  LAST={k,secTotals,capex,pct,cont,grand};
+}
+
+function fmtDate(v){ if(!v) return ''; const [y,m,d]=v.split('-').map(Number);
+  return d+' '+['January','February','March','April','May','June','July','August','September','October','November','December'][m-1]+' '+y; }
+
+function buildReport(){
+  const L=LAST; if(!L) return;
+  const v=id=>document.getElementById(id).value.trim();
+  const project=v('project')||'Spark by Hilton', loc=v('location'), type=v('ptype'), date=fmtDate(v('date'));
+  const sumRows=S.map((sec,i)=>`<tr><td>${i+1}</td><td>${esc(sec.summary)}${sec.id==='rooms'?' ('+L.k+' Keys)':''}</td><td class="n">${L.secTotals[sec.id]?inr(L.secTotals[sec.id]):'Not included'}</td></tr>`).join('');
+  const detail=S.map(sec=>`<h3>${esc(sec.title)}</h3><table><thead><tr><th style="width:6%">S No</th><th>Description</th><th style="width:10%">UOM</th><th class="n" style="width:8%">Qty</th><th class="n" style="width:15%">Rate</th><th class="n" style="width:17%">Amount</th></tr></thead><tbody>
+    ${sec.items.map((it,i)=>`<tr><td>${i+1}</td><td>${esc(it.desc)}</td><td>${esc(it.uom)}</td><td class="n">${it.on?it._q:'—'}</td><td class="n">${inr(it.rate)}</td><td class="n">${it.on?inr(it._amt):'Excluded'}</td></tr>`).join('')}
+    <tr class="sub"><td></td><td colspan="4">Total — ${esc(sec.summary)}</td><td class="n">${inr(L.secTotals[sec.id])}</td></tr></tbody></table>`).join('');
+  document.getElementById('report').innerHTML=`
+    <div class="rh"><div class="brand">✦ spark<small>by Hilton</small></div>
+      <div class="rt"><b>${esc(project)}</b><span>Budgetary Quotation — Interiors CAPEX${date?' · '+esc(date):''}</span></div></div>
+    <table class="info"><tbody>
+      <tr><td>Project</td><td>${esc(project)}</td></tr>
+      ${loc?`<tr><td>Location</td><td>${esc(loc)}</td></tr>`:''}
+      <tr><td>Number of keys</td><td>${L.k}</td></tr>
+      ${type?`<tr><td>Type</td><td>${esc(type)}</td></tr>`:''}
+      ${date?`<tr><td>Date</td><td>${esc(date)}</td></tr>`:''}
+    </tbody></table>
+    <h3>Summary</h3>
+    <table><thead><tr><th style="width:8%">S No</th><th>Interior Fit-out</th><th class="n" style="width:28%">Amount</th></tr></thead><tbody>
+      ${sumRows}
+      <tr class="sub"><td></td><td>Grand Total (Capex Cost)</td><td class="n">${inr(L.capex)}</td></tr>
+      <tr><td></td><td>Contingencies ${L.pct}%</td><td class="n">${inr(L.cont)}</td></tr>
+      <tr class="grand"><td></td><td>GRAND TOTAL (without Tax)</td><td class="n">${inr(L.grand)}</td></tr>
+      <tr><td></td><td>Total no. of keys</td><td class="n">${L.k}</td></tr>
+      <tr class="sub"><td></td><td>Cost per key (without Tax)</td><td class="n">${inr(L.grand/L.k)}</td></tr>
+    </tbody></table>
+    <h3>Exclusions</h3>
+    <ol style="margin:0 0 3mm;padding-left:6mm">${EXCLUSIONS.map(e=>'<li>'+esc(e)+'</li>').join('')}</ol>
+    <p class="fine">Budgetary estimate for interiors only. Final costs depend on site survey, design development and vendor quotations.</p>
+    <div class="pb"></div>
+    <h3 style="margin-top:0">Detailed Breakdown</h3>
+    ${detail}`;
+}
+
+function exportCsv(){
+  const L=LAST; if(!L) return;
+  const rows=[['Section','Description','UOM','Qty','Rate','Amount']];
+  S.forEach(sec=>sec.items.forEach(it=>rows.push([sec.summary,it.desc,it.uom,it.on?it._q:0,it.rate,it.on?Math.round(it._amt):0])));
+  rows.push([],['','Capex cost','','','',Math.round(L.capex)],['','Contingency '+L.pct+'%','','','',Math.round(L.cont)],['','Grand total (without tax)','','','',Math.round(L.grand)],['','Cost per key','','','',Math.round(L.grand/L.k)]);
+  const csv=rows.map(r=>r.map(c=>{c=String(c??'');return /[",\n]/.test(c)?'"'+c.replace(/"/g,'""')+'"':c;}).join(',')).join('\n');
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob(['﻿'+csv],{type:'text/csv'}));
+  a.download='CAPEX_'+(document.getElementById('project').value.trim()||'Spark').replace(/[^\w\-]+/g,'_')+'_'+L.k+'_Keys.csv';
+  document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);
+}
+
+(function init(){
+  const d=new Date(),p=n=>String(n).padStart(2,'0');
+  document.getElementById('date').value=d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());
+  buildTables(); calc();
+  document.getElementById('keys').addEventListener('input',()=>calc());
+  document.getElementById('cont').addEventListener('input',()=>calc(false));
+  document.getElementById('resetBtn').addEventListener('click',()=>{ S=JSON.parse(JSON.stringify(DEFAULT_SECTIONS)); toiletQtyTouched=false; buildTables(); calc(); });
+  document.getElementById('csvBtn').addEventListener('click',exportCsv);
+  document.getElementById('pdfBtn').addEventListener('click',()=>{
+    buildReport();
+    const proj=(document.getElementById('project').value.trim()||'Spark').replace(/[^\w\-]+/g,'_');
+    const old=document.title, nt='CAPEX_'+proj+'_'+LAST.k+'_Keys';
+    document.title=nt; try{ if(parent!==window){ parent.__capexTitle=parent.document.title; parent.document.title=nt; } }catch(_){}
+    window.print();
+    setTimeout(()=>{ document.title=old; try{ if(parent!==window) parent.document.title=parent.__capexTitle; }catch(_){} },500);
+  });
+  if(window.parent!==window){
+    const cb=document.getElementById('closeBtn'); cb.style.display='';
+    const close=()=>{ try{ parent.closeCapex(); }catch(_){} };
+    cb.onclick=close;
+    document.getElementById('backLink').onclick=e=>{ e.preventDefault(); close(); };
+  }
+})();
+</script>
+</body>
+</html>
