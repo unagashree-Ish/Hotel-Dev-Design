@@ -425,6 +425,7 @@ const DEFAULT_DATA = {
       {group:'Pre-Investment', label:'BoH — Space Standards', desc:'Spark back-of-house & front-of-house area calculator, live by key count, with the full standards tables', href:'https://unagashree-ish.github.io/Hotel-Dev-Design/boh-foh-standards.html'},
       {group:'Investment', label:'Design & construction docs', desc:'Concept/schematic/detailed design, tender & construction drawings — link to be added', href:'#'},
       {group:'Investment', label:'Design Brief Report', desc:'Spark DBR generator — enter key count, project name & date; picks the 60/80/100-key DBR with its FoH & BoH areas and saves as PDF', href:'#dbr'},
+      {group:'Investment', label:'Kick off Meeting', desc:'Spark by Hilton kick-off presentation — 15 slides, view on screen or present full-screen', href:'#kickoff'},
       {group:'Pre Operations', label:'Pre-opening design checklist', desc:'FF&E, OS&E, brand standards sign-off — link to be added', href:'#'},
       {group:'Handover', label:'As-built & handover pack', desc:'As-built drawings, O&M manuals, snag list — link to be added', href:'#'}
     ]
@@ -581,7 +582,7 @@ function renderLinksGrouped(links, wing, isAdmin){
     }
     html += `
       <div class="link-row${g?' grouped':''}">
-        <div>${l.href && l.href!=='#' ? (l.href==='#dbr' ? `<a href="#dbr" onclick="openDbr();return false;">${escapeHtml(l.label)}</a>` : `<a href="${escapeAttr(l.href)}" target="_blank" rel="noopener">${escapeHtml(l.label)}</a>`) : `<span style="color:var(--slate);font-weight:600;">${escapeHtml(l.label)} <span class="badge amber" style="margin-left:6px;">Coming soon</span></span>`}<div class="link-desc">${escapeHtml(l.desc||'')}</div></div>
+        <div>${l.href && l.href!=='#' ? (l.href==='#dbr' ? `<a href="#dbr" onclick="openDbr();return false;">${escapeHtml(l.label)}</a>` : l.href==='#kickoff' ? `<a href="#kickoff" onclick="openKickoff();return false;">${escapeHtml(l.label)}</a>` : `<a href="${escapeAttr(l.href)}" target="_blank" rel="noopener">${escapeHtml(l.label)}</a>`) : `<span style="color:var(--slate);font-weight:600;">${escapeHtml(l.label)} <span class="badge amber" style="margin-left:6px;">Coming soon</span></span>`}<div class="link-desc">${escapeHtml(l.desc||'')}</div></div>
         ${isAdmin?`<button class="del-x" data-action="delLink" data-wing="${wing}" data-idx="${i}">×</button>`:''}
       </div>`;
   });
@@ -1010,6 +1011,27 @@ function render(){
   render();
 })();
 <\/script>
+
+<!-- ============ KICK OFF MEETING (presentation viewer, opens over the hub) ============ -->
+<div id="kickoffOverlay" style="display:none;position:fixed;inset:0;z-index:9999;background:#0c1c2e;">
+  <iframe id="kickoffFrame" title="Kick off Meeting" allow="fullscreen" allowfullscreen style="border:0;width:100%;height:100%;display:block;"></iframe>
+</div>
+<script>
+function openKickoff(){
+  const f=document.getElementById('kickoffFrame');
+  if(!f.getAttribute('src')) f.setAttribute('src','kickoff-meeting.html');
+  document.getElementById('kickoffOverlay').style.display='block';
+  document.body.style.overflow='hidden';
+  if(location.hash!=='#kickoff') history.pushState(null,'','#kickoff');
+  try{ f.contentWindow.focus(); }catch(_){}
+}
+function closeKickoff(){
+  document.getElementById('kickoffOverlay').style.display='none';
+  document.body.style.overflow='';
+  if(location.hash==='#kickoff') history.pushState(null,'',location.pathname+location.search);
+}
+window.addEventListener('popstate',function(){ if(location.hash!=='#kickoff'){ document.getElementById('kickoffOverlay').style.display='none'; document.body.style.overflow=''; } });
+</script>
 </body>
 </html></script>
 <script>
@@ -1027,6 +1049,27 @@ function closeDbr(){
   if(location.hash==='#dbr') history.pushState(null,'',location.pathname+location.search);
 }
 window.addEventListener('popstate',function(){ if(location.hash!=='#dbr') { document.getElementById('dbrOverlay').style.display='none'; document.body.style.overflow=''; } });
+</script>
+
+<!-- ============ KICK OFF MEETING (presentation viewer, opens over the hub) ============ -->
+<div id="kickoffOverlay" style="display:none;position:fixed;inset:0;z-index:9999;background:#0c1c2e;">
+  <iframe id="kickoffFrame" title="Kick off Meeting" allow="fullscreen" allowfullscreen style="border:0;width:100%;height:100%;display:block;"></iframe>
+</div>
+<script>
+function openKickoff(){
+  const f=document.getElementById('kickoffFrame');
+  if(!f.getAttribute('src')) f.setAttribute('src','kickoff-meeting.html');
+  document.getElementById('kickoffOverlay').style.display='block';
+  document.body.style.overflow='hidden';
+  if(location.hash!=='#kickoff') history.pushState(null,'','#kickoff');
+  try{ f.contentWindow.focus(); }catch(_){}
+}
+function closeKickoff(){
+  document.getElementById('kickoffOverlay').style.display='none';
+  document.body.style.overflow='';
+  if(location.hash==='#kickoff') history.pushState(null,'',location.pathname+location.search);
+}
+window.addEventListener('popstate',function(){ if(location.hash!=='#kickoff'){ document.getElementById('kickoffOverlay').style.display='none'; document.body.style.overflow=''; } });
 </script>
 </body>
 </html>
