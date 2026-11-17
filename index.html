@@ -424,6 +424,7 @@ const DEFAULT_DATA = {
       {group:'Pre-Investment', label:'Conversion', desc:'Conversion of an existing building to hotel use — link to be added', href:'#'},
       {group:'Pre-Investment', label:'BoH — Space Standards', desc:'Spark back-of-house & front-of-house area calculator, live by key count, with the full standards tables', href:'https://unagashree-ish.github.io/Hotel-Dev-Design/boh-foh-standards.html'},
       {group:'Investment', label:'Design & construction docs', desc:'Concept/schematic/detailed design, tender & construction drawings — link to be added', href:'#'},
+      {group:'Investment', label:'Design Brief Report', desc:'Spark DBR generator — enter key count, project name & date; picks the 60/80/100-key DBR with its FoH & BoH areas and saves as PDF', href:'#dbr'},
       {group:'Pre Operations', label:'Pre-opening design checklist', desc:'FF&E, OS&E, brand standards sign-off — link to be added', href:'#'},
       {group:'Handover', label:'As-built & handover pack', desc:'As-built drawings, O&M manuals, snag list — link to be added', href:'#'}
     ]
@@ -446,7 +447,23 @@ let STORAGE_OK = true;
 function loadData(){
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
-    if(raw) return JSON.parse(raw);
+    if(raw){
+      const d = JSON.parse(raw);
+      // make sure newly added default links show up for browsers with saved data
+      try{
+        const links = d.design.links;
+        DEFAULT_DATA.design.links.forEach(function(l){
+          const ex = links.find(function(x){ return x.group===l.group && x.label===l.label; });
+          if(ex && (ex.href==='#' || /design-brief-report\.html$/.test(ex.href)) && l.href!=='#'){ ex.href=l.href; ex.desc=l.desc; }
+          if(!ex){
+            const grp = links.map(function(x){return x.group;});
+            const last = grp.lastIndexOf(l.group);
+            links.splice(last>=0 ? last+1 : links.length, 0, Object.assign({}, l));
+          }
+        });
+      }catch(_){}
+      return d;
+    }
   }catch(e){
     STORAGE_OK = false;
   }
@@ -564,7 +581,7 @@ function renderLinksGrouped(links, wing, isAdmin){
     }
     html += `
       <div class="link-row${g?' grouped':''}">
-        <div>${l.href && l.href!=='#' ? `<a href="${escapeAttr(l.href)}" target="_blank" rel="noopener">${escapeHtml(l.label)}</a>` : `<span style="color:var(--slate);font-weight:600;">${escapeHtml(l.label)} <span class="badge amber" style="margin-left:6px;">Coming soon</span></span>`}<div class="link-desc">${escapeHtml(l.desc||'')}</div></div>
+        <div>${l.href && l.href!=='#' ? (l.href==='#dbr' ? `<a href="#dbr" onclick="openDbr();return false;">${escapeHtml(l.label)}</a>` : `<a href="${escapeAttr(l.href)}" target="_blank" rel="noopener">${escapeHtml(l.label)}</a>`) : `<span style="color:var(--slate);font-weight:600;">${escapeHtml(l.label)} <span class="badge amber" style="margin-left:6px;">Coming soon</span></span>`}<div class="link-desc">${escapeHtml(l.desc||'')}</div></div>
         ${isAdmin?`<button class="del-x" data-action="delLink" data-wing="${wing}" data-idx="${i}">×</button>`:''}
       </div>`;
   });
@@ -645,6 +662,371 @@ function saveLink(wing){
   saveData(); closeModal(); renderApp();
 }
 document.getElementById('overlay').addEventListener('click', (e)=>{ if(e.target.id==='overlay') closeModal(); });
+</script>
+
+<!-- ============ DESIGN BRIEF REPORT (DBR generator, opens over the hub) ============ -->
+<div id="dbrOverlay" style="display:none;position:fixed;inset:0;z-index:9999;background:#0c1c2e;">
+  <button type="button" onclick="closeDbr()" title="Back to Design Wing" style="position:absolute;top:14px;right:18px;z-index:2;border:1px solid rgba(130,200,235,.32);background:#123151;color:#eaf3fb;border-radius:8px;padding:8px 14px;font:600 13px 'IBM Plex Sans',sans-serif;cursor:pointer;">✕ Close</button>
+  <iframe id="dbrFrame" title="Design Brief Report" style="border:0;width:100%;height:100%;display:block;"></iframe>
+</div>
+<script type="text/plain" id="dbrSource"><!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Design Brief Report — Design Wing / Investment</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0c1c2e; --bg-deep:#08141f; --panel:#123151; --panel-soft:#0f2740;
+    --line:rgba(130,200,235,0.16); --line-strong:rgba(130,200,235,0.32);
+    --text:#eaf3fb; --text-muted:#8fabc4; --text-faint:#5d7893;
+    --boh:#59d9c4; --foh:#f2a93b; --accent:#c48bf2;
+    --display:'Space Grotesk',sans-serif; --body:'IBM Plex Sans',sans-serif; --mono:'IBM Plex Mono',monospace;
+    /* document palette (from the DBR .docx) */
+    --navy:#1B2A4A; --purple:#5B3E96; --gold:#B8860B; --lav:#EDE7F6; --grey:#595959;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:
+      repeating-linear-gradient(0deg,transparent,transparent 39px,var(--line) 39px,var(--line) 40px),
+      repeating-linear-gradient(90deg,transparent,transparent 39px,var(--line) 39px,var(--line) 40px),
+      linear-gradient(180deg,var(--bg-deep),var(--bg) 6%);
+    color:var(--text); font-family:var(--body); font-size:15px; -webkit-font-smoothing:antialiased;
+  }
+  .app{display:grid;grid-template-columns:360px 1fr;min-height:100vh}
+  aside{padding:28px 22px 40px;border-right:1px solid var(--line);background:rgba(8,20,31,.6);position:sticky;top:0;height:100vh;overflow:auto}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted)}
+  .eyebrow a{color:var(--text-muted);text-decoration:none}
+  .eyebrow a:hover{color:var(--text)}
+  h1.title{font-family:var(--display);font-size:26px;margin:8px 0 6px;line-height:1.15}
+  .lede{color:var(--text-muted);font-size:13.5px;line-height:1.5;margin:0 0 22px}
+  .sheet{border:1px solid var(--line-strong);border-radius:10px;overflow:hidden;background:var(--panel-soft)}
+  .sheet-row{display:grid;grid-template-columns:130px 1fr;border-bottom:1px solid var(--line)}
+  .sheet-row:last-child{border-bottom:0}
+  .sheet-row label{padding:12px;font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);background:rgba(18,49,81,.6);border-right:1px solid var(--line);display:flex;align-items:center}
+  .sheet-row input{width:100%;border:0;background:transparent;color:var(--text);font:500 15px var(--body);padding:12px;outline:none}
+  .sheet-row input:focus{background:rgba(196,139,242,.08)}
+  .sheet-row input[type=number]{font-family:var(--mono);font-size:17px}
+  input[type=date]{color-scheme:dark}
+  .err{color:#ff8a80;font-size:12.5px;margin:8px 2px 0;min-height:1em}
+  .tier{margin-top:18px;border:1px solid var(--line-strong);border-radius:10px;padding:14px 16px;background:var(--panel)}
+  .tier .big{font-family:var(--display);font-size:22px;margin-top:4px}
+  .tier .big b{color:var(--accent)}
+  .bands{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;white-space:nowrap;margin-top:12px}
+  .band{border:1px solid var(--line);border-radius:6px;padding:8px 6px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--text-faint)}
+  .band b{display:block;font-size:12.5px;color:var(--text-muted);margin-bottom:2px}
+  .band.on{border-color:var(--accent);background:rgba(196,139,242,.12);color:var(--text)}
+  .band.on b{color:var(--accent)}
+  .kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+  .kpi{border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+  .kpi .v{font-family:var(--mono);font-size:18px;margin-top:2px}
+  .kpi.foh .v{color:var(--foh)} .kpi.boh .v{color:var(--boh)}
+  .btn{margin-top:18px;width:100%;padding:14px;border:0;border-radius:10px;background:var(--accent);color:#1a0f2b;font:700 15px var(--display);letter-spacing:.02em;cursor:pointer}
+  .btn:hover{filter:brightness(1.08)}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+  .hint{color:var(--text-faint);font-size:12px;line-height:1.5;margin-top:10px}
+  main{padding:32px 24px 60px;overflow:auto}
+  .preview-label{max-width:210mm;margin:0 auto 10px;font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted)}
+
+  /* ---------- DOCUMENT ---------- */
+  .doc{background:#fff;color:#222;width:210mm;margin:0 auto;padding:18mm 18mm 20mm;box-shadow:0 20px 60px rgba(0,0,0,.45);font-family:'Inter',Arial,sans-serif;font-size:10pt;line-height:1.45}
+  .doc .runhead{text-align:center;font-family:'Times New Roman',serif;font-size:8.5pt;color:var(--grey);margin-bottom:10mm}
+  .cover{text-align:center;padding-top:28mm}
+  .cover .spark-star{color:var(--gold);font-size:22pt;line-height:1}
+  .cover .spark-word{font-family:Georgia,'Times New Roman',serif;font-weight:700;color:var(--purple);font-size:34pt;line-height:1;margin-top:2mm}
+  .cover .by{font-family:Georgia,'Times New Roman',serif;font-weight:700;color:var(--navy);font-size:11pt}
+  .cover h1{font-weight:700;color:var(--navy);font-size:24pt;margin:8mm 0 3mm;letter-spacing:.01em}
+  .cover .proto{font-weight:600;color:var(--purple);font-size:13pt}
+  .cover .scope{color:var(--grey);font-size:10.5pt;margin-top:1mm}
+  .doc table{width:100%;border-collapse:collapse;margin:3mm 0 1.5mm;font-size:9.5pt}
+  .doc th{background:var(--navy);color:#fff;font-weight:600;text-align:center;padding:1.6mm 2.4mm;border:0.5pt solid var(--navy)}
+  .doc th:first-child{text-align:left}
+  .doc td{padding:1.4mm 2.4mm;border:0.5pt solid #c9c3d6;text-align:center}
+  .doc td:first-child{text-align:left}
+  .doc tbody tr:nth-child(even) td{background:var(--lav)}
+  .doc tr{break-inside:avoid}
+  .doc table.kv td:first-child{width:38%}
+  .doc tr.total td{font-weight:600}
+  .cover-table{margin-top:14mm !important}
+  .doc h2{font-weight:700;color:var(--navy);font-size:14pt;margin:9mm 0 3mm;padding-bottom:1.5mm;border-bottom:0.75pt solid var(--navy);break-after:avoid}
+  .doc h3{font-weight:700;color:var(--purple);font-size:11pt;margin:5mm 0 2mm;break-after:avoid}
+  .doc p{margin:0 0 2.5mm}
+  .doc ul{margin:0 0 2.5mm;padding-left:6mm}
+  .doc li{margin-bottom:1mm}
+  .doc .note{font-style:italic;color:var(--grey);font-size:9pt;margin-top:1mm}
+  .doc .pb{break-before:page}
+  .doc .tierflag{display:inline-block;margin-top:3mm;padding:1mm 3mm;border:0.75pt solid var(--purple);color:var(--purple);border-radius:2mm;font-size:9pt;font-weight:600}
+  .screen-pagebreak{height:0;border-top:1px dashed #c9c3d6;margin:10mm -18mm 10mm;position:relative}
+  .screen-pagebreak::after{content:'page break';position:absolute;right:4mm;top:-7px;background:#fff;padding:0 2mm;font:8pt var(--mono);color:#aaa}
+
+  @media (max-width:980px){ .app{grid-template-columns:1fr} aside{position:static;height:auto} .doc{width:100%;padding:8mm} }
+
+  @page{size:A4;margin:16mm 16mm 18mm}
+  @media print{
+    body{background:#fff}
+    aside,.preview-label,.screen-pagebreak,.runhead{display:none !important}
+    .app{display:block} main{padding:0;overflow:visible}
+    .doc{width:auto;margin:0;padding:0;box-shadow:none}
+    .cover{padding-top:18mm}
+    *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  }
+</style>
+<style id="pageMarginStyle"></style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div class="eyebrow"><a href="#" onclick="if(parent&&parent.closeDbr){parent.closeDbr();}return false;">Design Wing</a> / Investment</div>
+    <h1 class="title">Design Brief Report</h1>
+    <p class="lede">Enter the key count, project name and date. The matching Spark by Hilton DBR tier is applied, with its FoH and BoH area figures, and the report is ready to save as PDF.</p>
+
+    <div class="sheet">
+      <div class="sheet-row"><label for="keys">Key count</label><input id="keys" type="number" min="40" max="105" step="1" value="60" inputmode="numeric"></div>
+      <div class="sheet-row"><label for="project">Project name</label><input id="project" type="text" value="" placeholder="e.g. Spark by Hilton Pune"></div>
+      <div class="sheet-row"><label for="date">Date prepared</label><input id="date" type="date"></div>
+    </div>
+    <div class="err" id="err"></div>
+
+    <div class="tier">
+      <div class="eyebrow">DBR applied</div>
+      <div class="big" id="tierBig">—</div>
+      <div class="bands">
+        <div class="band" data-t="60"><b>60-key DBR</b>40–65 keys</div>
+        <div class="band" data-t="80"><b>80-key DBR</b>66–85 keys</div>
+        <div class="band" data-t="100"><b>100-key DBR</b>86–105 keys</div>
+      </div>
+      <div class="kpis">
+        <div class="kpi foh"><div class="eyebrow">FoH area</div><div class="v" id="kFoh">—</div></div>
+        <div class="kpi boh"><div class="eyebrow">BoH area</div><div class="v" id="kBoh">—</div></div>
+      </div>
+    </div>
+
+    <button class="btn" id="pdfBtn">Generate PDF</button>
+    <div class="hint">In the print window, choose <b>Save as PDF</b> as the destination. For the page header and page numbers, keep “Headers and footers” off — the report prints its own.</div>
+  </aside>
+
+  <main>
+    <div class="preview-label">Report preview</div>
+    <article class="doc" id="doc"></article>
+  </main>
+</div>
+
+<script>
+const TIERS = {"60": {"foh": [["Valet parking", "Optional"], ["Boom barrier", "Required"], ["X-ray scanner", "Required"], ["Reception", "250"], ["Spark wall (fixed brand element)", "120"], ["Retail space / vending machine (fixed)", "140"], ["Social lounge", "250"], ["Dine — pax (65% × keys)", "40 pax"], ["Dine area (NBC norm)", "700"], ["Chai cart (fixed)", "80"], ["Main kitchen", "850"], ["Gym", "450"], ["Washrooms", "100"], ["TOTAL FOH AREA", "2,940"]], "boh": [["Security cabin", "—", "64.0"], ["Time office", "—", "50.0"], ["Uniform room", "—", "100.0"], ["Server room", "—", "100.0"], ["Changing room — Women", "1", "30"], ["Washroom — Women", "1", "20.0"], ["Changing room — Men", "1", "30"], ["Urinals — Men", "2", "18.0"], ["Lockers — Men", "33", "-"], ["Lockers — Women", "9", "-"], ["Ladies room", "—", "100.0"], ["Staff accommodation (ground staff)*", "16", "640.0"], ["GRE accommodation*", "4", "240.0"], ["Staff dine area*", "—", "500"], ["Staff kitchen", "—", "-"], ["Handwash points", "2", "-"], ["Break-out space + game zone", "—", "200.0"], ["Reception — BOH", "—", "120.0"], ["Garbage segregation", "—", "80.0"], ["Main store", "—", "200.0"], ["Kitchen store", "—", "100.0"], ["GM office", "—", "100.0"], ["Workstations*", "5", "150.0"], ["Staff entry & exit (separate)", "Required", "No area counted"], ["Service lift", "1", "—"], ["Luggage room", "—", "80.0"], ["Cloth washing", "—", "-"], ["Cloth drying", "—", "-"], ["Shower — Women", "1 (fixed ≤150 keys)", "-"], ["Shower — Men", "1 (fixed ≤150 keys)", "-"], ["TOTAL BOH AREA", "—", "2,922"]], "fohNote": "Basis for 50–60 keys: dine covers = 65% × keys (33 pax at 50 keys, 39 pax at 60 keys) × 16.15 SFT/pax (NBC 2016). Spark wall, retail/vending, chai cart and gym are fixed brand elements. Reception, social lounge, main kitchen and washrooms are taken at the Spark standards 60-key module, which is the minimum module and is not scaled below 60 keys.", "bohNote": "Basis for 50–60 keys: BOH areas and counts are taken at the Spark standards 60-key module, the minimum module for this range. * Staff-linked items may be reviewed against the final staffing plan (Section 3.1).", "staff": ["50 – 60 keys", "0.45 – 0.55 staff/room*", "23 – 33"]}, "80": {"foh": [["Valet parking", "Optional"], ["Boom barrier", "Required"], ["X-ray scanner", "Required"], ["Reception", "400"], ["Spark wall (fixed brand element)", "120"], ["Retail space / vending machine (fixed)", "140"], ["Social lounge", "400"], ["Dine — pax (65% × keys)", "50 pax"], ["Dine area (NBC norm)", "900"], ["Chai cart (fixed)", "80"], ["Main kitchen", "750"], ["Gym", "450"], ["Washrooms", "150"], ["TOTAL FOH AREA", "3,390"]], "boh": [["Security cabin", "—", "64.0"], ["Time office", "—", "60"], ["Uniform room", "—", "140"], ["Server room", "—", "80"], ["Changing room — Women", "1", "30"], ["Washroom — Women", "2", "-"], ["Changing room — Men", "1", "30"], ["Urinals — Men", "3", "-"], ["Lockers — Men", "37", "-"], ["Lockers — Women", "10", "-"], ["Ladies room", "—", "100.0"], ["Staff accommodation (ground staff)*", "18", "720.0"], ["GRE accommodation*", "5", "300.0"], ["Staff dine area*", "—", "500.0"], ["Staff kitchen", "—", "-"], ["Handwash points", "2", "-"], ["Break-out space + game zone", "—", "250.0"], ["Reception — BOH", "—", "120.0"], ["Garbage segregation", "—", "80.0"], ["Main store", "—", "200.0"], ["Kitchen store", "—", "100.0"], ["GM office", "—", "100.0"], ["Workstations*", "6", "180.0"], ["Staff entry & exit (separate)", "Required", "No area counted"], ["Service lift", "1", "—"], ["Luggage room", "—", "80.0"], ["Cloth washing", "—", "-"], ["Cloth drying", "—", "-"], ["Shower — Women", "1 (fixed ≤150 keys)", "-"], ["Shower — Men", "1 (fixed ≤150 keys)", "-"], ["TOTAL BOH AREA", "—", "3,134"]], "fohNote": "Basis for 80 keys: dine covers = 65% × 80 keys (52 pax) × 16.15 SFT/pax (NBC 2016). Spark wall, retail/vending, chai cart and gym are fixed brand elements. Reception, social lounge, main kitchen and washrooms are taken from the Spark standards 80-key tier.", "bohNote": "Basis for 80 keys: BOH areas and counts are taken from the Spark standards 80-key tier. * Staff-linked items may be reviewed against the final staffing plan (Section 3.1).", "staff": ["80 keys", "0.45 – 0.55 staff/room*", "36 – 44"]}, "100": {"foh": [["Valet parking", "Optional"], ["Boom barrier", "Required"], ["X-ray scanner", "Required"], ["Reception", "453"], ["Spark wall (fixed brand element)", "120"], ["Retail space / vending machine (fixed)", "140"], ["Social lounge", "453"], ["Dine — pax (65% × keys)", "65 pax"], ["Dine area (NBC norm)", "1050"], ["Chai cart (fixed)", "80"], ["Main kitchen", "1200"], ["Gym", "450"], ["Washrooms", "358"], ["TOTAL FOH AREA", "4,304"]], "boh": [["Security cabin", "—", "64.0"], ["Time office", "—", "100.0"], ["Uniform room", "—", "180.0"], ["Server room", "—", "100.0"], ["Changing room — Women", "1", "30.0"], ["Washroom — Women", "2", "40.0"], ["Changing room — Men", "1", "30.0"], ["Urinals — Men", "3", "-"], ["Lockers — Men", "45", "-"], ["Lockers — Women", "10", "-"], ["Ladies room", "—", "100.0"], ["Staff accommodation (ground staff)*", "20", "800.0"], ["GRE accommodation*", "5", "-"], ["Staff dine area*", "—", "700.0"], ["Staff kitchen", "—", "100.0"], ["Handwash points", "3", "-"], ["Break-out space + game zone", "—", "250.0"], ["Reception — BOH", "—", "150.0"], ["Garbage segregation", "—", "80.0"], ["Main store", "—", "200.0"], ["Kitchen store", "—", "120.0"], ["GM office", "—", "100.0"], ["Workstations*", "6", "180.0"], ["Staff entry & exit (separate)", "Required", "No area counted"], ["Service lift", "1", "—"], ["Luggage room", "—", "80.0"], ["Cloth washing", "—", "-"], ["Cloth drying", "—", "-"], ["Shower — Women", "1 (fixed ≤150 keys)", "36.0"], ["Shower — Men", "1 (fixed ≤150 keys)", "36.0"], ["TOTAL BOH AREA", "—", "3,476"]], "fohNote": "Basis for 100 keys: figures match the Spark standards 100-key tier and the kick-off deck FOH breakdown. Dine covers = 65% × 100 keys (65 pax) × 16.15 SFT/pax (NBC 2016). Spark wall, retail/vending, chai cart and gym are fixed brand elements.", "bohNote": "Basis for 100 keys: BOH areas and counts match the Spark standards 100-key tier and the kick-off deck BOH breakdown. * Staff-linked items may be reviewed against the final staffing plan (Section 3.1).", "staff": ["100 keys", "0.45 – 0.55 staff/room*", "45 – 55"]}};
+
+const TIER_META = {
+  '60': {range:'50–60 Keys', proto:'50–60-Key Prototype', docNo:'DBR-SPARK-50-60K-Rev.0', hdr:'50–60 Keys',
+         intro:'50–60-key', hvac:'50–60-key built-up area of approx. 20,000 – 24,000 SFT'},
+  '80': {range:'80 Keys', proto:'80-Key Prototype', docNo:'DBR-SPARK-80K-Rev.0', hdr:'80 Keys',
+         intro:'80-key', hvac:'80-key built-up area of approx. 32,000 SFT'},
+  '100':{range:'100 Keys', proto:'100-Key Prototype', docNo:'DBR-SPARK-100K-Rev.0', hdr:'100 Keys',
+         intro:'100-key', hvac:'100-key built-up area of approx. 40,000 SFT'}
+};
+
+function tierFor(k){
+  if(k>=40 && k<=65) return '60';
+  if(k>=66 && k<=85) return '80';
+  if(k>=86 && k<=105) return '100';
+  return null;
+}
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function fmtDate(v){
+  if(!v) return '';
+  const [y,m,d] = v.split('-').map(Number);
+  const M=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  return d+' '+M[m-1]+' '+y;
+}
+function rowsHtml(rows){
+  return rows.map(r=>{
+    const total = /^TOTAL/.test(r[0]);
+    return '<tr'+(total?' class="total"':'')+'>'+r.map(c=>'<td>'+esc(c)+'</td>').join('')+'</tr>';
+  }).join('');
+}
+
+function render(){
+  const raw = document.getElementById('keys').value.trim();
+  const k = Number(raw);
+  const t = Number.isInteger(k) ? tierFor(k) : null;
+  const project = document.getElementById('project').value.trim() || 'Spark by Hilton Prototype';
+  const dateStr = fmtDate(document.getElementById('date').value);
+  const err = document.getElementById('err');
+  const btn = document.getElementById('pdfBtn');
+
+  document.querySelectorAll('.band').forEach(b=>b.classList.toggle('on', b.dataset.t===t));
+  if(!t){
+    err.textContent = raw==='' ? 'Enter a key count between 40 and 105.' : 'Key count must be a whole number from 40 to 105.';
+    btn.disabled = true;
+    document.getElementById('tierBig').textContent='—';
+    document.getElementById('kFoh').textContent='—';
+    document.getElementById('kBoh').textContent='—';
+    document.getElementById('doc').innerHTML = '<p style="color:#999;text-align:center;padding:40mm 0">Enter a key count between 40 and 105 to build the report.</p>';
+    return;
+  }
+  err.textContent=''; btn.disabled=false;
+  const T = TIERS[t], M = TIER_META[t];
+  const fohTotal = T.foh[T.foh.length-1][1], bohTotal = T.boh[T.boh.length-1][2];
+  document.getElementById('tierBig').innerHTML = k+' keys → <b>'+t+'-key DBR</b>';
+  document.getElementById('kFoh').textContent = fohTotal+' SFT';
+  document.getElementById('kBoh').textContent = bohTotal+' SFT';
+
+  const keyLine = k+' Keys';
+  const header = 'Spark by Hilton — Design Basis Report ('+keyLine+') | Project: '+project;
+
+  document.getElementById('pageMarginStyle').textContent =
+    '@page{@top-center{content:"'+header.replace(/["\\]/g,'\\$&')+'";font-family:"Times New Roman",serif;font-size:8.5pt;color:#595959}'+
+    '@bottom-center{content:"Page " counter(page) " of " counter(pages);font-family:"Times New Roman",serif;font-size:8.5pt;color:#595959}}';
+
+  document.getElementById('doc').innerHTML = `
+  <div class="runhead">${esc(header)}</div>
+  <section class="cover">
+    <div class="spark-star">✦</div>
+    <div class="spark-word">spark</div>
+    <div class="by">by Hilton</div>
+    <h1>DESIGN BASIS REPORT</h1>
+    <div class="proto">${esc(keyLine)}</div>
+    <div class="scope">Design | Operational | Fire &amp; Life Safety (FLS) | MEP | HVAC</div>
+    <div class="tierflag">Prepared on the ${esc(M.proto)} DBR basis</div>
+  </section>
+  <table class="kv cover-table"><thead><tr><th>Field</th><th>Detail</th></tr></thead><tbody>
+    <tr><td>Project Name</td><td>${esc(project)}</td></tr>
+    <tr><td>Brand</td><td>Spark by Hilton</td></tr>
+    <tr><td>Key Count</td><td>${esc(keyLine)}</td></tr>
+    <tr><td>DBR Basis</td><td>${esc(M.proto)}</td></tr>
+    <tr><td>Document No.</td><td>${esc(M.docNo)}</td></tr>
+    <tr><td>Date</td><td>${esc(dateStr)}</td></tr>
+  </tbody></table>
+
+  <h2>1. Introduction &amp; Project Overview</h2>
+  <p>This Design Basis Report (DBR) establishes the design, operational, Fire &amp; Life Safety (FLS), MEP, and HVAC basis for ${esc(project)}, a ${k}-key Spark by Hilton hotel, prepared on the Spark by Hilton ${esc(M.intro)} prototype basis.</p>
+  <h3>1.1 Project Snapshot</h3>
+  <table class="kv"><thead><tr><th>Parameter</th><th>Basis of Design</th></tr></thead><tbody>
+    <tr><td>Project Name</td><td>${esc(project)}</td></tr>
+    <tr><td>Brand</td><td>Spark by Hilton</td></tr>
+    <tr><td>Standard</td><td>Spark by Hilton Brand Standards</td></tr>
+    <tr><td>Key count</td><td>${esc(keyLine)}</td></tr>
+    <tr><td>DBR basis</td><td>${esc(M.proto)}</td></tr>
+  </tbody></table>
+
+  <div class="screen-pagebreak"></div>
+  <h2 class="pb">2. Design Points (Space Program)</h2>
+  <h3>2.1 Configuration &amp; Built-Up Area</h3>
+  <table class="kv"><thead><tr><th>Parameter</th><th>${esc(M.hdr)}</th></tr></thead><tbody>
+    <tr><td>Brand standard</td><td>Spark by Hilton Brand Standards</td></tr>
+  </tbody></table>
+  <h3>2.2 Guestroom Module</h3>
+  <ul><li>Two standard finish themes shown in design renders: Blue Theme or Green Theme.</li></ul>
+
+  <h3>2.3 Front-of-House (FOH) — Area Breakdown</h3>
+  <table class="kv"><thead><tr><th>Component</th><th>${esc(M.hdr)} (SFT)</th></tr></thead><tbody>${rowsHtml(T.foh.slice(0,-1))}
+    <tr class="total"><td>TOTAL FOH AREA</td><td>${esc(fohTotal)} SFT</td></tr></tbody></table>
+  <p class="note">${esc(T.fohNote)}</p>
+
+  <h3>2.4 Back-of-House (BOH) — Area Breakdown</h3>
+  <table><thead><tr><th>Component</th><th>Count</th><th>Area (SFT)</th></tr></thead><tbody>${rowsHtml(T.boh)}</tbody></table>
+  <p class="note">${esc(T.bohNote)}</p>
+
+  <h3>2.5 Common Area Highlights (from Design Renders)</h3>
+  <ul>
+    <li>Lobby &amp; Reception: branded reception desk, self-service snack counter, and the signature "Spark wall" — 'It Only Takes a Spark' brand statement wall.</li>
+    <li>Social Lounge: collaborative hub / co-working-style seating adjacent to the lobby.</li>
+    <li>All-Day Dining: 185 SQM / 1,975 SFT — shown in design renders as a distinct restaurant footprint (separate from the NBC-normative dine area in Section 2.3, which is a code-minimum check figure — the two should be reconciled during layout planning).</li>
+    <li>Gymnasium</li>
+  </ul>
+
+  <h2>3. Operational Points</h2>
+  <h3>3.1 Staffing Projection</h3>
+  <table><thead><tr><th>Scenario</th><th>Staffing Ratio</th><th>Projected Staff Count</th></tr></thead><tbody>
+    <tr>${T.staff.map(c=>'<td>'+esc(c)+'</td>').join('')}</tr></tbody></table>
+  <p class="note">* Ratio excludes F&amp;B kitchen and service staff, per the source deck. F&amp;B staffing should be added separately based on the all-day dining and banquet operating model finalized for this property.</p>
+  <h3>3.2 Security &amp; Access Control</h3>
+  <ul>
+    <li>CCTV coverage across all entrances, exits, and corridors.</li>
+    <li>Boom barrier at the main vehicle gate.</li>
+    <li>X-ray scanner and metal detector at the main entry.</li>
+    <li>Time office fitted with CCTV monitor provision.</li>
+    <li>Digital door locks — approved brands: Onity, Wintronix, or Assa Abloy.</li>
+  </ul>
+  <h3>3.3 Guest &amp; Staff Flow / BOH Standards</h3>
+  <ul>
+    <li>Separate staff entry and exit, distinct from the guest arrival experience (no area counted — a planning requirement, not a room).</li>
+    <li>Dedicated service lift for staff, linen, and goods movement, independent of the guest lift(s).</li>
+    <li>BOH reception, time office, and security cabin positioned at the staff entry point for controlled access.</li>
+    <li>On-premises staff accommodation (ground staff and GRE — Guest Relations Executive tier) provided per the BOH breakdown in Section 2.4.</li>
+  </ul>
+
+  <h2>4. Fire &amp; Life Safety (FLS)</h2>
+  <p>FLS requirements below are Spark by Hilton brand-mandated technical standards; they do not scale with key count (system capacities such as pump/tank sizing will scale with building volume and occupant load, and should be confirmed at detailed design).</p>
+  <h3>4.1 Smoke Detectors</h3>
+  <ul><li>Addressable-type detectors in all guestrooms and corridors.</li><li>Basement smoke detectors — confirmed required.</li><li>75 dB at pillow level — mandatory.</li><li>PA system integration into guestrooms.</li></ul>
+  <h3>4.2 Fire Sprinklers</h3>
+  <ul><li>Sprinklers in corridors and car park.</li><li>Kitchen fire suppression — wet chemical system.</li><li>Basement coverage — confirmed required.</li><li>Maximum 20 m dead-end sprinklered corridor.</li></ul>
+  <h3>4.3 Egress &amp; Staircases</h3>
+  <ul><li>Minimum 2 enclosed, fire-rated staircases.</li><li>30-minute fire-rated room entry doors.</li><li>2-hour fire rating on corridor doors.</li><li>Self-closing, panic-free staircase doors.</li></ul>
+  <h3>4.4 Fire Alarm &amp; Manual Call Points (MCP)</h3>
+  <ul><li>Addressable fire detection system throughout.</li><li>Manual call points within 30 m of travel distance.</li><li>Alarm zone drawings posted at reception.</li><li>75 dB+ audible alarm coverage throughout the building.</li></ul>
+  <h3>4.5 Extinguishers &amp; Hydrants</h3>
+  <ul><li>ABC-type extinguishers in general areas.</li><li>CO₂ extinguishers in electrical and server rooms.</li><li>Foam-type extinguishers in kitchen and fuel storage areas.</li><li>Wet riser pressure ≥ 3.5 kg/cm² on each floor.</li></ul>
+  <h3>4.6 Emergency &amp; Evacuation</h3>
+  <ul><li>Emergency lighting at all exits.</li><li>Evacuation maps posted behind room doors and at lift lobbies.</li><li>Lift auto-recall to ground floor on fire alarm activation.</li><li>CCTV and smoke detector positions marked on evacuation drawings.</li></ul>
+
+  <h2>5. MEP (Electrical, Plumbing &amp; Security Systems)</h2>
+  <p>MEP technical points below are brand-mandated; electrical load, transformer, and DG sizing will scale with building area and connected load and should be computed at detailed design.</p>
+  <h3>5.1 CCTV &amp; Security</h3>
+  <ul><li>All entrances, exits, and corridors covered by CCTV.</li><li>Boom barrier at the main vehicle gate.</li><li>X-ray scanner and metal detector at entry.</li><li>Time office fitted with a CCTV monitor provision.</li></ul>
+  <h3>5.2 Electrical</h3>
+  <ul><li>Emergency lighting at all exits and staircases.</li><li>Backup power provided to the Building Automation System (BAS) and security systems.</li><li>Digital lock (digilock) — approved brands: Onity, Wintronix, or Assa Abloy.</li><li>Individual in-room energy management via occupancy sensors.</li></ul>
+
+  <h2>6. HVAC</h2>
+  <p>HVAC design basis below is a brand-mandated technical standard. Total connected cooling/heating capacity (tonnage) for the ${esc(M.hvac)} (at the brand ratio of 400 SFT/key) should be computed at detailed design.</p>
+  <ul><li>Wall-mounted thermostat with occupancy interlock; concealed fan coil unit (see Section 6 — HVAC).</li></ul>
+  <table class="kv"><thead><tr><th>Parameter</th><th>Design Basis</th></tr></thead><tbody>
+    <tr><td>System type</td><td>VRF / VRV — no manual heating/cooling changeover required</td></tr>
+    <tr><td>Design standard</td><td>ASHRAE 90.1, with ISHRAE 2022 weather data for Indian conditions</td></tr>
+    <tr><td>Filtration</td><td>MERV 13 for public spaces; MERV 8 for individual guestrooms</td></tr>
+    <tr><td>Ductwork</td><td>Sheet metal only; flexible duct limited to max. 2.4 m run to diffuser/grille</td></tr>
+    <tr><td>BAS integration</td><td>Direct digital control (DDC), open-protocol BAS, with backup power</td></tr>
+    <tr><td>Guestroom unit</td><td>Concealed fan coil unit (FCU); wall-mounted thermostat with occupancy interlock</td></tr>
+    <tr><td>Heating</td><td>Heat pump recommended — no gas-fired heating systems required</td></tr>
+    <tr><td>Smoke dampers</td><td>Automatic smoke dampers, interlocked with the fire alarm system</td></tr>
+  </tbody></table>`;
+}
+
+(function init(){
+  const d=new Date(), p=n=>String(n).padStart(2,'0');
+  document.getElementById('date').value = d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());
+  ['keys','project','date'].forEach(id=>document.getElementById(id).addEventListener('input',render));
+  document.getElementById('pdfBtn').addEventListener('click',()=>{
+    const k=document.getElementById('keys').value.trim();
+    const proj=(document.getElementById('project').value.trim()||'Spark_Prototype').replace(/[^\w\-]+/g,'_');
+    const old=document.title;
+    document.title='DBR_'+proj+'_'+k+'_Keys'; try{parent.document.title=document.title;}catch(_){}   // becomes the default PDF file name
+    window.print();
+    setTimeout(()=>{document.title=old; try{parent.document.title=parent.__dbrTitle||parent.document.title;}catch(_){}},500);
+  });
+  render();
+})();
+<\/script>
+</body>
+</html></script>
+<script>
+function openDbr(){
+  const f=document.getElementById('dbrFrame');
+  if(!f.dataset.loaded){ f.srcdoc=document.getElementById('dbrSource').textContent.replace(/<\\\/script/g,'</'+'script'); f.dataset.loaded='1'; }
+  window.__dbrTitle=document.title;
+  document.getElementById('dbrOverlay').style.display='block';
+  document.body.style.overflow='hidden';
+  if(location.hash!=='#dbr') history.pushState(null,'','#dbr');
+}
+function closeDbr(){
+  document.getElementById('dbrOverlay').style.display='none';
+  document.body.style.overflow='';
+  if(location.hash==='#dbr') history.pushState(null,'',location.pathname+location.search);
+}
+window.addEventListener('popstate',function(){ if(location.hash!=='#dbr') { document.getElementById('dbrOverlay').style.display='none'; document.body.style.overflow=''; } });
 </script>
 </body>
 </html>
